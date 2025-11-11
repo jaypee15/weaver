@@ -1,0 +1,111 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: weaver-api
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: '1'
+        autoscaling.knative.dev/maxScale: '10'
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      containers:
+      - image: gcr.io/PROJECT_ID/weaver-api:latest
+        ports:
+        - name: http1
+          containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: weaver-secrets
+              key: database_url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: weaver-secrets
+              key: redis_url
+        - name: GOOGLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: weaver-secrets
+              key: google_api_key
+        - name: SUPABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: weaver-secrets
+              key: supabase_url
+        - name: SUPABASE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: weaver-secrets
+              key: supabase_key
+        - name: ENVIRONMENT
+          value: production
+        resources:
+          limits:
+            cpu: '2'
+            memory: 2Gi
+          requests:
+            cpu: '1'
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: weaver-worker
+spec:
+  selector:
+    app: weaver-worker
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weaver-worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: weaver-worker
+  template:
+    metadata:
+      labels:
+        app: weaver-worker
+    spec:
+      containers:
+      - name: worker
+        image: gcr.io/PROJECT_ID/weaver-worker:latest
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: weaver-secrets
+              key: database_url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: weaver-secrets
+              key: redis_url
+        - name: GOOGLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: weaver-secrets
+              key: google_api_key
+        - name: ENVIRONMENT
+          value: production
+        resources:
+          limits:
+            cpu: '2'
+            memory: 4Gi
+          requests:
+            cpu: '1'
+            memory: 2Gi
+
