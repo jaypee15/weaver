@@ -184,7 +184,7 @@ export default function UploadTab({ tenantId }: UploadTabProps) {
             <p className="text-gray-500 text-sm mb-6">
               Upload your first document to start training your bot
             </p>
-            <Button onClick={() => (document.querySelector('input[type="file"]') as HTMLInputElement)?.click()}>
+            <Button onClick={() => document.querySelector('input[type="file"]')?.click()}>
               <Upload className="w-4 h-4 mr-2" />
               Upload Document
             </Button>

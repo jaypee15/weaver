@@ -17,7 +17,6 @@ export default function APIKeysTab({ tenantId }: APIKeysTabProps) {
   const [copied, setCopied] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [keyName, setKeyName] = useState('')
-  const [activeCodeTab, setActiveCodeTab] = useState('curl')
   
   // Test panel state
   const [testKey, setTestKey] = useState<string>('')
@@ -212,8 +211,8 @@ export default function APIKeysTab({ tenantId }: APIKeysTabProps) {
       <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <h3 className="font-semibold mb-2 text-blue-900">Bot API Endpoints</h3>
         
-        <Tabs value={activeCodeTab} onValueChange={setActiveCodeTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs defaultValue="curl" className="w-full">
+          <TabsList>
             <TabsTrigger value="curl">cURL</TabsTrigger>
             <TabsTrigger value="javascript">JavaScript</TabsTrigger>
             <TabsTrigger value="python">Python</TabsTrigger>

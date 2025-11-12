@@ -443,7 +443,7 @@ function APIKeysTab({ tenantId }: { tenantId: string }) {
       
       <button
         onClick={createKey}
-        className="mb-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg"
+        className="mb-6 bg-blue-900 hover:bg-blue-950 text-white font-semibold py-2 px-6 rounded-lg"
       >
         Create New API Key
       </button>

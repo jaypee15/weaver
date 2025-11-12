@@ -3,13 +3,23 @@ import { apiClient } from '@/lib/axios'
 import { useAuthStore } from '@/store/authStore'
 import type { QueryStatsResponse, TopQuery, UnansweredQuery } from '@/types'
 
-export function useQueryStats(tenantId: string | undefined) {
+export function useQueryStats(tenantId: string | undefined, days: string = '30') {
   const session = useAuthStore((state) => state.session)
+  
+  // Calculate start_date based on days
+  const startDate = new Date()
+  startDate.setDate(startDate.getDate() - parseInt(days))
+  const endDate = new Date()
+  
   return useQuery({
-    queryKey: ['analytics', 'stats', tenantId],
+    queryKey: ['analytics', 'stats', tenantId, days],
     queryFn: async () => {
       if (!tenantId || !session) return { daily_stats: [] } as QueryStatsResponse
       const res = await apiClient.get<QueryStatsResponse>(`/v1/tenants/${tenantId}/analytics/queries`, {
+        params: {
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString(),
+        },
         headers: { Authorization: `Bearer ${session.access_token}` },
       })
       return res.data

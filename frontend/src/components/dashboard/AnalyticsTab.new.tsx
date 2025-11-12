@@ -113,7 +113,7 @@ export default function AnalyticsTab({ tenantId }: AnalyticsTabProps) {
             Query Volume
           </h3>
           <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={[...stats.daily_stats].reverse()}>
+            <AreaChart data={stats.daily_stats}>
               <defs>
                 <linearGradient id="colorQueries" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3} />
@@ -201,7 +201,7 @@ export default function AnalyticsTab({ tenantId }: AnalyticsTabProps) {
           </div>
         ) : (
           <p className="text-gray-500 text-center py-8">
-            No low-confidence queries
+            No low-confidence queries — great job! 🎉
           </p>
         )}
       </div>
