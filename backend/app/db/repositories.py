@@ -299,12 +299,12 @@ class ChunkRepository:
             
             return [
                 {
-                    "id": row[0],
-                    "doc_id": row[1],
+                    "id": str(row[0]),
+                    "doc_id": str(row[1]),  # Convert UUID to string
                     "text": row[2],
                     "page_num": row[3],
                     "metadata": row[4],
-                    "similarity": row[5],
+                    "similarity": float(row[5]),
                 }
                 for row in rows
             ]
@@ -342,6 +342,18 @@ class QueryLogRepository:
         sources: List[dict],
     ):
         async with AsyncSessionLocal() as session:
+            # Ensure payload is JSON-serializable
+            def convert(obj):
+                if isinstance(obj, UUID):
+                    return str(obj)
+                if isinstance(obj, list):
+                    return [convert(item) for item in obj]
+                if isinstance(obj, dict):
+                    return {key: convert(value) for key, value in obj.items()}
+                return obj
+
+            safe_sources = convert(sources)
+
             bot_query = BotQuery(
                 tenant_id=tenant_id,
                 api_key_id=api_key_id,
@@ -349,7 +361,7 @@ class QueryLogRepository:
                 answer=answer,
                 confidence=confidence,
                 latency_ms=latency_ms,
-                sources=sources,
+                sources=safe_sources,
             )
             session.add(bot_query)
             await session.commit()

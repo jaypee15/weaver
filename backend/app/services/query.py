@@ -61,7 +61,14 @@ class QueryService:
             answer=answer,
             confidence=confidence,
             latency_ms=latency_ms,
-            sources=[s.dict() for s in sources],
+            sources=[
+                {
+                    "doc_id": str(s.doc_id),
+                    "page": s.page,
+                    "confidence": s.confidence,
+                }
+                for s in sources
+            ],
         )
         
         return QueryResponse(

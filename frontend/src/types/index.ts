@@ -29,3 +29,32 @@ export interface CreateAPIKeyResponse {
   id: string
 }
 
+export interface BotConfig {
+  id: string
+  tenant_id: string
+  name: string
+  config: Record<string, any>
+  created_at: string
+}
+
+export interface DailyStat {
+  date: string
+  total_queries: number
+  avg_latency_ms: number
+  low_confidence_count: number
+}
+
+export interface QueryStatsResponse {
+  daily_stats: DailyStat[]
+}
+
+export interface TopQuery {
+  query: string
+  count: number
+}
+
+export interface UnansweredQuery {
+  query: string
+  created_at: string
+}
+

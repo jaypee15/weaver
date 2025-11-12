@@ -25,7 +25,7 @@ class QueryRequest(BaseModel):
 
 
 class Source(BaseModel):
-    doc_id: UUID
+    doc_id: str
     page: Optional[int] = None
     confidence: float
 

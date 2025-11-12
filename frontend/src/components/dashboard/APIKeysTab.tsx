@@ -11,6 +11,12 @@ interface APIKeysTabProps {
 export default function APIKeysTab({ tenantId }: APIKeysTabProps) {
   const [newKey, setNewKey] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [testKey, setTestKey] = useState<string>('')
+  const [testQuery, setTestQuery] = useState<string>('')
+  const [stream, setStream] = useState<boolean>(true)
+  const [testing, setTesting] = useState<boolean>(false)
+  const [testOutput, setTestOutput] = useState<string>('')
+  const [testError, setTestError] = useState<string>('')
 
   const { data: keys = [], isLoading } = useAPIKeys(tenantId)
   const createMutation = useCreateAPIKey(tenantId)
@@ -43,6 +49,98 @@ export default function APIKeysTab({ tenantId }: APIKeysTabProps) {
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
       console.error('Failed to copy:', err)
+    }
+  }
+
+  const runNonStreamingTest = async () => {
+    setTesting(true)
+    setTestError('')
+    setTestOutput('')
+    try {
+      const res = await fetch(`${API_URL}/v1/tenants/${tenantId}/query`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${testKey}`,
+        },
+        body: JSON.stringify({ query: testQuery }),
+      })
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(text || `HTTP ${res.status}`)
+      }
+      const data = await res.json()
+      const sources = (data.sources || []).map((s: any, i: number) => `[${i+1}] doc:${s.doc_id} page:${s.page ?? 'N/A'} conf:${s.confidence?.toFixed?.(2) ?? s.confidence}`).join('\n')
+      setTestOutput(`${data.answer}\n\nConfidence: ${data.confidence}\nLatency: ${data.latency_ms} ms\n\nSources:\n${sources}`)
+    } catch (e: any) {
+      setTestError(e?.message || String(e))
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const runStreamingTest = async () => {
+    setTesting(true)
+    setTestError('')
+    setTestOutput('')
+    try {
+      const url = `${API_URL}/v1/tenants/${tenantId}/query/stream?query=${encodeURIComponent(testQuery)}`
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${testKey}`,
+          'Accept': 'text/event-stream',
+        },
+      })
+      if (!res.ok || !res.body) {
+        const text = await res.text()
+        throw new Error(text || `HTTP ${res.status}`)
+      }
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const parts = buffer.split('\n\n')
+        buffer = parts.pop() || ''
+        for (const part of parts) {
+          const line = part.trim()
+          if (!line.startsWith('data:')) continue
+          const payload = line.slice(5).trim()
+          if (payload === '[DONE]') {
+            break
+          }
+          try {
+            const obj = JSON.parse(payload)
+            if (typeof obj.content === 'string') {
+              setTestOutput(prev => prev + obj.content)
+            } else if (obj.sources || obj.confidence) {
+              const sources = (obj.sources || []).map((s: any, i: number) => `[${i+1}] doc:${s.doc_id} page:${s.page ?? 'N/A'} conf:${s.confidence?.toFixed?.(2) ?? s.confidence}`).join('\n')
+              setTestOutput(prev => prev + `\n\nConfidence: ${obj.confidence}\n\nSources:\n${sources}`)
+            }
+          } catch {
+            // ignore malformed chunks
+          }
+        }
+      }
+    } catch (e: any) {
+      setTestError(e?.message || String(e))
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const handleRunTest = async () => {
+    if (!testKey || !testQuery) {
+      setTestError('Provide API key and a query to test.')
+      return
+    }
+    if (stream) {
+      await runStreamingTest()
+    } else {
+      await runNonStreamingTest()
     }
   }
 
@@ -79,6 +177,52 @@ export default function APIKeysTab({ tenantId }: APIKeysTabProps) {
             </pre>
           </div>
         </details>
+      </div>
+
+      {/* Test Bot Panel */}
+      <div className="rounded-lg border p-4 bg-white">
+        <h3 className="font-semibold mb-3">Test Your Bot</h3>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">API Key</label>
+            <input
+              type="password"
+              className="w-full border rounded px-3 py-2"
+              placeholder="wvr_..."
+              value={testKey}
+              onChange={(e) => setTestKey(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Query</label>
+            <textarea
+              className="w-full border rounded px-3 py-2 min-h-[90px]"
+              placeholder="Ask your bot something..."
+              value={testQuery}
+              onChange={(e) => setTestQuery(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={stream}
+                onChange={(e) => setStream(e.target.checked)}
+              />
+              Stream response (SSE)
+            </label>
+            <Button onClick={handleRunTest} disabled={testing}>
+              {testing ? 'Testing…' : 'Run Test'}
+            </Button>
+          </div>
+          {testError && <div className="text-sm text-red-600">{testError}</div>}
+          <div className="mt-2">
+            <label className="block text-sm text-gray-700 mb-1">Response</label>
+            <pre className="w-full border rounded px-3 py-2 bg-gray-50 whitespace-pre-wrap text-sm min-h-[120px]">
+              {testOutput || '—'}
+            </pre>
+          </div>
+        </div>
       </div>
 
       {/* Create New Key */}
