@@ -4,10 +4,11 @@ import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { LogOut, Upload as UploadIcon, Key, BarChart3 } from 'lucide-react'
+import { LogOut, Upload as UploadIcon, Key, BarChart3, Settings } from 'lucide-react'
 import UploadTab from '@/components/dashboard/UploadTab'
 import APIKeysTab from '@/components/dashboard/APIKeysTab'
 import AnalyticsTab from '@/components/dashboard/AnalyticsTab'
+import BotSettingsTab from '@/components/dashboard/BotSettingsTab'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -77,6 +78,10 @@ export default function Dashboard() {
               <Key className="w-4 h-4 mr-2" />
               API Keys
             </TabsTrigger>
+            <TabsTrigger value="settings">
+              <Settings className="w-4 h-4 mr-2" />
+              Bot Settings
+            </TabsTrigger>
             <TabsTrigger value="analytics">
               <BarChart3 className="w-4 h-4 mr-2" />
               Analytics
@@ -95,6 +100,14 @@ export default function Dashboard() {
             <Card>
               <CardContent className="pt-6">
                 <APIKeysTab tenantId={user.tenant_id} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <Card>
+              <CardContent className="pt-6">
+                <BotSettingsTab tenantId={user.tenant_id} />
               </CardContent>
             </Card>
           </TabsContent>

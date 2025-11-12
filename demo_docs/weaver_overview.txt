@@ -1,0 +1,177 @@
+# Weaver Platform Overview
+
+## What is Weaver?
+
+Weaver is an AI-powered knowledge bot platform that enables businesses to create and deploy intelligent customer-service bots trained on their own documents. Built on cutting-edge RAG (Retrieval-Augmented Generation) technology, Weaver transforms your documentation into conversational AI that can answer questions accurately and contextually.
+
+## Key Features
+
+### Document Ingestion
+- Upload multiple document formats: PDF, DOCX, TXT, and HTML
+- Automatic text extraction and preprocessing
+- Intelligent document chunking for optimal retrieval
+- Support for large document libraries
+
+### RAG-Based Query Answering
+- Semantic search using vector embeddings
+- Context-aware responses based on your documents
+- High accuracy with source citation
+- Confidence scoring for every answer
+
+### API-First Architecture
+- RESTful API endpoints for integration
+- API key authentication for secure access
+- Rate limiting (60 requests per minute)
+- Daily query limits (50 queries per day, configurable)
+- Real-time streaming responses via Server-Sent Events (SSE)
+
+### AI-Powered Bot Configuration
+- No prompt engineering skills required
+- Simple business information form
+- AI generates optimal system prompts
+- Customizable bot personality (Professional, Friendly, Technical, Casual, Formal)
+- Edit and regenerate prompts as needed
+
+### Performance & Scalability
+- High-performance query engine (1.5-3s average latency)
+- Redis caching for embeddings and query results
+- Optimized HNSW vector search
+- PostgreSQL with pgvector extension
+- Horizontal scaling support
+
+### Analytics Dashboard
+- Query volume tracking
+- Average latency monitoring
+- Low-confidence query identification
+- Top queries analysis
+- Daily usage statistics
+
+### Multi-Tenancy
+- Secure data isolation per tenant
+- One bot per tenant architecture
+- Role-based access control (Owner, Admin, Member)
+- Individual API keys per tenant
+
+## Technology Stack
+
+### Backend
+- FastAPI (Python 3.12) - High-performance web framework
+- Celery + Redis - Background task processing
+- PostgreSQL + pgvector - Vector database with HNSW indexing
+- SQLAlchemy 2.0 - Async ORM
+- Alembic - Database migrations
+- Google Gemini - LLM and embeddings (gemini-2.5-flash-lite, gemini-embedding-001)
+
+### Frontend
+- React 18 + Vite + TypeScript
+- Zustand - State management
+- TanStack Query (React Query) - Server state
+- Tailwind CSS + shadcn/ui - Styling
+- Recharts - Analytics visualization
+
+### Storage & Auth
+- Google Cloud Storage (GCS) - Document storage via HMAC keys
+- Supabase OAuth - Google authentication
+- JWT tokens for API authentication
+
+## Use Cases
+
+### Customer Support
+Deploy a bot that answers common customer questions based on your help documentation, reducing support ticket volume and response times.
+
+### Internal Knowledge Base
+Enable employees to quickly find information across company wikis, policies, and procedures without manual searching.
+
+### Product Documentation
+Help developers and users understand your product features, API endpoints, and integration guides through conversational queries.
+
+### Technical Documentation
+Assist developers with API documentation, code examples, and troubleshooting guides in a natural language interface.
+
+### Education & Training
+Provide students or trainees with instant access to course materials, FAQs, and learning resources.
+
+## Getting Started
+
+1. **Sign Up** - Create an account using Google OAuth
+2. **Upload Documents** - Add your PDFs, DOCX, TXT, or HTML files
+3. **Configure Bot** - Describe your business to generate a custom system prompt
+4. **Generate API Key** - Create keys for programmatic access
+5. **Integrate** - Use our REST API to query your bot from any application
+6. **Monitor** - Track usage and performance in the analytics dashboard
+
+## Pricing Tiers (Future)
+
+### Free Tier
+- 50 queries per day
+- 10 documents max
+- 100 MB storage
+- Email support
+
+### Pro Tier
+- 1,000 queries per day
+- Unlimited documents
+- 10 GB storage
+- Priority support
+- Custom branding
+
+### Enterprise
+- Unlimited queries
+- Unlimited documents
+- Unlimited storage
+- Dedicated support
+- On-premise deployment option
+- SLA guarantees
+
+## Security & Compliance
+
+- End-to-end encryption for data at rest and in transit
+- SOC 2 Type II compliant infrastructure
+- GDPR compliant data processing
+- Regular security audits
+- Role-based access control (RBAC)
+- API key rotation support
+- Audit logging for all operations
+
+## Support & Resources
+
+- Documentation: https://docs.weaver.com
+- API Reference: https://api.weaver.com/docs
+- Community Forum: https://community.weaver.com
+- Email Support: support@weaver.com
+- Status Page: https://status.weaver.com
+
+## Roadmap
+
+### Q1 2025
+- Multi-language support
+- Advanced analytics with A/B testing
+- Webhook integrations
+- Slack and Discord bots
+
+### Q2 2025
+- Custom domain support
+- White-labeling options
+- Fine-tuning support for specialized domains
+- Compliance certifications (HIPAA, SOC 2)
+
+### Q3 2025
+- Mobile SDKs (iOS and Android)
+- Voice interaction support
+- Advanced prompt templates
+- Team collaboration features
+
+## Contact
+
+For sales inquiries: sales@weaver.com
+For partnerships: partners@weaver.com
+For general questions: hello@weaver.com
+
+Follow us on Twitter: @WeaverAI
+LinkedIn: linkedin.com/company/weaver-ai
+
+---
+
+Weaver - Transform your documents into intelligent conversations.
+Version 1.0 | Last Updated: November 2024
+

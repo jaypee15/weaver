@@ -14,6 +14,10 @@ from app.api.v1.schemas import (
     BotConfigResponse,
     SignupResponse,
     UserMeResponse,
+    BusinessInfoRequest,
+    GeneratedPromptResponse,
+    BotConfigUpdate,
+    BotSettingsResponse,
 )
 from app.auth.api_key import verify_api_key
 from app.auth.types import APIKeyData
@@ -28,6 +32,9 @@ from app.db.repositories import (
     ProfileRepository,
 )
 from app.middleware.rate_limit import check_rate_limit
+from app.services.cache import cache_service
+from app.services.rate_limit import daily_limit_service
+from app.config import settings
 from app.api.v1 import analytics
 
 
@@ -103,17 +110,29 @@ async def query_bot(
     request: QueryRequest,
     api_key_data: APIKeyData = Depends(verify_api_key),
 ):
-    if api_key_data.tenant_id != tenant_id:
-        raise HTTPException(status_code=403, detail="Tenant ID mismatch")
+    # Allow access to demo bot OR user's own tenant
+    demo_bot_id = UUID(settings.DEMO_BOT_TENANT_ID) if settings.DEMO_BOT_ENABLED else None
     
+    if tenant_id != api_key_data.tenant_id:
+        # Check if querying demo bot
+        if not (demo_bot_id and tenant_id == demo_bot_id):
+            raise HTTPException(status_code=403, detail="Access denied. You can only query your own bot or the demo bot.")
+    
+    # Check rate limit (per minute)
     await check_rate_limit(api_key_data)
+    
+    # Check daily query limit - ALWAYS use user's tenant_id (not demo bot's)
+    limit_info = await daily_limit_service.check_and_increment(api_key_data.tenant_id)
     
     query_service = QueryService()
     result = await query_service.query(
-        tenant_id=tenant_id,
+        tenant_id=tenant_id,  # Can be demo bot or user's own bot
         query=request.query,
         api_key_id=api_key_data.key_id,
     )
+    
+    # Add limit info to response
+    result.daily_usage = limit_info
     
     return result
 
@@ -124,14 +143,23 @@ async def query_bot_stream(
     query: str,
     api_key_data: APIKeyData = Depends(verify_api_key),
 ):
-    if api_key_data.tenant_id != tenant_id:
-        raise HTTPException(status_code=403, detail="Tenant ID mismatch")
+    # Allow access to demo bot OR user's own tenant
+    demo_bot_id = UUID(settings.DEMO_BOT_TENANT_ID) if settings.DEMO_BOT_ENABLED else None
     
+    if tenant_id != api_key_data.tenant_id:
+        # Check if querying demo bot
+        if not (demo_bot_id and tenant_id == demo_bot_id):
+            raise HTTPException(status_code=403, detail="Access denied. You can only query your own bot or the demo bot.")
+    
+    # Check rate limit (per minute)
     await check_rate_limit(api_key_data)
+    
+    # Check daily query limit - ALWAYS use user's tenant_id (not demo bot's)
+    await daily_limit_service.check_and_increment(api_key_data.tenant_id)
     
     query_service = QueryService()
     stream = query_service.query_stream(
-        tenant_id=tenant_id,
+        tenant_id=tenant_id,  # Can be demo bot or user's own bot
         query=query,
         api_key_id=api_key_data.key_id,
     )
@@ -232,4 +260,106 @@ async def revoke_api_key(
     await api_key_repo.revoke_key(tenant_id, key_id)
     
     return {"status": "revoked"}
+
+
+@router.get("/cache/stats")
+async def get_cache_stats(user: User = Depends(get_current_user)):
+    """
+    Get cache statistics (admin/monitoring endpoint)
+    """
+    stats = cache_service.get_stats()
+    return stats
+
+
+@router.get("/tenants/{tenant_id}/usage/daily")
+async def get_daily_usage(
+    tenant_id: UUID,
+    user: User = Depends(get_current_user),
+):
+    """
+    Get current daily query usage for a tenant
+    """
+    if user.tenant_id != tenant_id:
+        raise HTTPException(status_code=403, detail="Tenant ID mismatch")
+    
+    usage = await daily_limit_service.get_current_usage(tenant_id)
+    return usage
+
+
+@router.post("/tenants/{tenant_id}/bot/generate-prompt", response_model=GeneratedPromptResponse)
+async def generate_system_prompt(
+    tenant_id: UUID,
+    request: BusinessInfoRequest,
+    user: User = Depends(get_current_user),
+):
+    """
+    Generate optimal system prompt from business information using LLM
+    """
+    require_admin_or_owner(user, tenant_id)
+    
+    from app.services.prompt_generator import PromptGeneratorService
+    
+    generator = PromptGeneratorService()
+    system_prompt = await generator.generate_from_business_info(
+        business_name=request.business_name,
+        industry=request.industry,
+        description=request.description,
+        tone=request.tone,
+        primary_goal=request.primary_goal,
+        special_instructions=request.special_instructions,
+    )
+    
+    return GeneratedPromptResponse(
+        system_prompt=system_prompt,
+        business_info=request.dict(),
+    )
+
+
+@router.put("/tenants/{tenant_id}/bot", response_model=BotSettingsResponse)
+async def update_bot_config(
+    tenant_id: UUID,
+    request: BotConfigUpdate,
+    user: User = Depends(get_current_user),
+):
+    """
+    Update bot configuration (system prompt, business info, etc.)
+    """
+    require_admin_or_owner(user, tenant_id)
+    
+    bot_repo = BotRepository()
+    
+    # Get existing bot
+    bot = await bot_repo.get_by_tenant(tenant_id)
+    if not bot:
+        raise HTTPException(status_code=404, detail="Bot not found")
+    
+    # Update config_json
+    current_config = bot.get("config", {})
+    
+    # Update system_prompt if provided
+    if request.system_prompt is not None:
+        if request.system_prompt.strip():
+            current_config["system_prompt"] = request.system_prompt.strip()
+        else:
+            # Empty string = remove custom prompt, use default
+            current_config.pop("system_prompt", None)
+    
+    # Update business_info if provided
+    if request.business_info is not None:
+        current_config["business_info"] = request.business_info
+    
+    # Update bot in database
+    await bot_repo.update_config(tenant_id, current_config)
+    
+    # Return updated config
+    updated_bot = await bot_repo.get_by_tenant(tenant_id)
+    return BotSettingsResponse(
+        tenant_id=str(tenant_id),
+        name=updated_bot["name"],
+        system_prompt=updated_bot["config"].get("system_prompt"),
+        business_info=updated_bot["config"].get("business_info"),
+        using_default_prompt=("system_prompt" not in updated_bot["config"]),
+        created_at=updated_bot["created_at"].isoformat(),
+        updated_at=updated_bot["updated_at"].isoformat(),
+    )
 

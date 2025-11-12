@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAPIKeys, useCreateAPIKey, useRevokeAPIKey } from '@/hooks/useAPIKeys'
+import { useDocuments } from '@/hooks/useDocuments'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -7,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Copy, Check, Trash2, Play, Square } from 'lucide-react'
 import { API_URL } from '@/lib/axios'
 import { toast } from 'sonner'
+
+const DEMO_BOT_ID = '00000000-0000-0000-0000-000000000000'
 
 interface APIKeysTabProps {
   tenantId: string
@@ -19,6 +22,9 @@ export default function APIKeysTab({ tenantId }: APIKeysTabProps) {
   const [keyName, setKeyName] = useState('')
   const [activeCodeTab, setActiveCodeTab] = useState('curl')
   
+  // Bot selector state
+  const [selectedBot, setSelectedBot] = useState<'demo' | 'own'>('demo')
+  
   // Test panel state
   const [testKey, setTestKey] = useState<string>('')
   const [testQuery, setTestQuery] = useState<string>('')
@@ -29,8 +35,12 @@ export default function APIKeysTab({ tenantId }: APIKeysTabProps) {
   const abortControllerRef = useRef<AbortController | null>(null)
 
   const { data: keys = [], isLoading } = useAPIKeys(tenantId)
+  const { data: documents = [] } = useDocuments(tenantId)
   const createMutation = useCreateAPIKey(tenantId)
   const revokeMutation = useRevokeAPIKey(tenantId)
+  
+  const hasDocs = documents && documents.length > 0
+  const activeTenantId = selectedBot === 'demo' ? DEMO_BOT_ID : tenantId
 
   // Load test panel state from localStorage
   useEffect(() => {
@@ -101,7 +111,7 @@ export default function APIKeysTab({ tenantId }: APIKeysTabProps) {
       if (stream) {
         // Streaming SSE
         const response = await fetch(
-          `${API_URL}/v1/tenants/${tenantId}/query/stream?query=${encodeURIComponent(testQuery)}`,
+          `${API_URL}/v1/tenants/${activeTenantId}/query/stream?query=${encodeURIComponent(testQuery)}`,
           {
             headers: {
               'Authorization': `Bearer ${testKey}`,
@@ -121,6 +131,7 @@ export default function APIKeysTab({ tenantId }: APIKeysTabProps) {
         if (!reader) throw new Error('No response body')
 
         let buffer = ''
+        // eslint-disable-next-line no-constant-condition
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
@@ -149,7 +160,7 @@ export default function APIKeysTab({ tenantId }: APIKeysTabProps) {
         }
       } else {
         // Non-streaming POST
-        const response = await fetch(`${API_URL}/v1/tenants/${tenantId}/query`, {
+        const response = await fetch(`${API_URL}/v1/tenants/${activeTenantId}/query`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${testKey}`,
@@ -210,7 +221,45 @@ export default function APIKeysTab({ tenantId }: APIKeysTabProps) {
 
       {/* API Endpoint Information */}
       <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <h3 className="font-semibold mb-2 text-blue-900">Bot API Endpoints</h3>
+        <h3 className="font-semibold mb-3 text-blue-900">Available Bot Endpoints</h3>
+        
+        <div className="space-y-3 mb-4">
+          {/* Demo Bot Endpoint */}
+          <div className="p-3 bg-white rounded border border-blue-200">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">🎯 Demo Bot</span>
+              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded font-medium">
+                Ready to use
+              </span>
+            </div>
+            <code className="text-xs text-gray-600 break-all block">
+              POST {API_URL}/v1/tenants/{DEMO_BOT_ID}/query
+            </code>
+            <p className="text-xs text-gray-500 mt-1">
+              Try out Weaver with pre-loaded sample content
+            </p>
+          </div>
+
+          {/* User's Bot Endpoint */}
+          <div className={`p-3 rounded border ${hasDocs ? 'bg-white border-blue-200' : 'bg-gray-100 border-gray-300 opacity-60'}`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">📚 Your Bot</span>
+              <span className={`text-xs px-2 py-1 rounded font-medium ${
+                hasDocs 
+                  ? 'text-green-600 bg-green-50' 
+                  : 'text-gray-500 bg-gray-200'
+              }`}>
+                {hasDocs ? 'Ready' : 'Upload docs first'}
+              </span>
+            </div>
+            <code className="text-xs text-gray-600 break-all block">
+              POST {API_URL}/v1/tenants/{tenantId}/query
+            </code>
+            <p className="text-xs text-gray-500 mt-1">
+              {hasDocs ? 'Query your custom knowledge base' : 'Upload documents to activate your bot'}
+            </p>
+          </div>
+        </div>
         
         <Tabs value={activeCodeTab} onValueChange={setActiveCodeTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
@@ -222,11 +271,15 @@ export default function APIKeysTab({ tenantId }: APIKeysTabProps) {
           <TabsContent value="curl" className="space-y-4">
             <div>
               <p className="text-sm text-gray-700 mb-2 font-medium">Non-streaming (POST):</p>
-              <code className="block p-3 bg-white rounded font-mono text-xs border overflow-x-auto">
-                POST {API_URL}/v1/tenants/{tenantId}/query
-              </code>
-              <pre className="mt-2 p-3 bg-white rounded border text-xs overflow-x-auto">
-{`curl -X POST ${API_URL}/v1/tenants/${tenantId}/query \\
+              <pre className="p-3 bg-white rounded border text-xs overflow-x-auto">
+{`# Demo Bot
+curl -X POST ${API_URL}/v1/tenants/${DEMO_BOT_ID}/query \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"query": "What is Weaver?"}'
+
+# Your Bot (replace with your tenant ID)
+curl -X POST ${API_URL}/v1/tenants/${tenantId}/query \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"query": "What is your product about?"}'`}
@@ -235,11 +288,14 @@ export default function APIKeysTab({ tenantId }: APIKeysTabProps) {
             
             <div>
               <p className="text-sm text-gray-700 mb-2 font-medium">Streaming (SSE):</p>
-              <code className="block p-3 bg-white rounded font-mono text-xs border overflow-x-auto">
-                GET {API_URL}/v1/tenants/{tenantId}/query/stream?query=...
-              </code>
-              <pre className="mt-2 p-3 bg-white rounded border text-xs overflow-x-auto">
-{`curl -N -H "Authorization: Bearer YOUR_API_KEY" \\
+              <pre className="p-3 bg-white rounded border text-xs overflow-x-auto">
+{`# Demo Bot
+curl -N -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Accept: text/event-stream" \\
+  "${API_URL}/v1/tenants/${DEMO_BOT_ID}/query/stream?query=What+is+Weaver"
+
+# Your Bot
+curl -N -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Accept: text/event-stream" \\
   "${API_URL}/v1/tenants/${tenantId}/query/stream?query=What+is+your+product+about"`}
               </pre>
@@ -248,21 +304,21 @@ export default function APIKeysTab({ tenantId }: APIKeysTabProps) {
           
           <TabsContent value="javascript" className="space-y-4">
             <pre className="p-3 bg-white rounded border text-xs overflow-x-auto">
-{`// Non-streaming
-const response = await fetch('${API_URL}/v1/tenants/${tenantId}/query', {
+{`// Demo Bot - Non-streaming
+const response = await fetch('${API_URL}/v1/tenants/${DEMO_BOT_ID}/query', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer YOUR_API_KEY',
     'Content-Type': 'application/json',
   },
-  body: JSON.stringify({ query: 'What is your product about?' }),
+  body: JSON.stringify({ query: 'What is Weaver?' }),
 });
 const data = await response.json();
 console.log(data.answer);
 
-// Streaming
+// Your Bot - Streaming (replace tenantId)
 const response = await fetch(
-  '${API_URL}/v1/tenants/${tenantId}/query/stream?query=' + 
+  '${API_URL}/v1/tenants/YOUR_TENANT_ID/query/stream?query=' + 
   encodeURIComponent('What is your product about?'),
   {
     headers: {
@@ -295,21 +351,20 @@ while (true) {
           <TabsContent value="python" className="space-y-4">
             <pre className="p-3 bg-white rounded border text-xs overflow-x-auto">
 {`import requests
+import json
 
-# Non-streaming
+# Demo Bot - Non-streaming
 response = requests.post(
-    '${API_URL}/v1/tenants/${tenantId}/query',
+    '${API_URL}/v1/tenants/${DEMO_BOT_ID}/query',
     headers={'Authorization': 'Bearer YOUR_API_KEY'},
-    json={'query': 'What is your product about?'}
+    json={'query': 'What is Weaver?'}
 )
 data = response.json()
 print(data['answer'])
 
-# Streaming
-import json
-
+# Your Bot - Streaming (replace YOUR_TENANT_ID)
 response = requests.get(
-    '${API_URL}/v1/tenants/${tenantId}/query/stream',
+    '${API_URL}/v1/tenants/YOUR_TENANT_ID/query/stream',
     params={'query': 'What is your product about?'},
     headers={
         'Authorization': 'Bearer YOUR_API_KEY',
@@ -459,6 +514,47 @@ for line in response.iter_lines():
       <div className="border-t pt-6">
         <h3 className="text-lg font-semibold mb-4">Test Your Bot</h3>
         <div className="space-y-4 p-4 bg-gray-50 rounded-lg border">
+          {/* Bot Selector */}
+          <div className="flex items-center gap-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <label className="text-sm font-medium text-gray-700">Query:</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSelectedBot('demo')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedBot === 'demo'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                🎯 Demo Bot
+              </button>
+              <button
+                onClick={() => hasDocs && setSelectedBot('own')}
+                disabled={!hasDocs}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedBot === 'own' && hasDocs
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : hasDocs
+                    ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 cursor-pointer'
+                    : 'bg-white text-gray-400 border border-gray-300 cursor-not-allowed opacity-60'
+                }`}
+                title={!hasDocs ? 'Upload documents first to test your own bot' : 'Test your custom bot'}
+              >
+                📚 Your Bot {!hasDocs && '(Upload docs first)'}
+              </button>
+            </div>
+          </div>
+
+          {/* Info Banner */}
+          {selectedBot === 'demo' && (
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
+              <p className="text-yellow-800">
+                <strong>Testing Demo Bot:</strong> Try out Weaver with pre-loaded sample content.
+                Upload your own documents to create your custom bot!
+              </p>
+            </div>
+          )}
+
           <div>
             <label htmlFor="testKey" className="block text-sm font-medium mb-2">
               API Key
@@ -480,7 +576,7 @@ for line in response.iter_lines():
               id="testQuery"
               className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows={3}
-              placeholder="Ask your bot a question..."
+              placeholder={selectedBot === 'demo' ? "Ask about Weaver..." : "Ask your bot a question..."}
               value={testQuery}
               onChange={(e) => setTestQuery(e.target.value)}
             />

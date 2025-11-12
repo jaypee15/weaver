@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useBotConfig } from '@/hooks/useBot'
 import { useQueryStats, useTopQueries, useUnansweredQueries } from '@/hooks/useAnalytics'
+import { useDailyUsage } from '@/hooks/useDailyUsage'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts'
-import { BarChart3, TrendingUp, Clock, AlertCircle } from 'lucide-react'
+import { BarChart3, TrendingUp, Clock, AlertCircle, Zap } from 'lucide-react'
 
 interface AnalyticsTabProps {
   tenantId: string
@@ -17,6 +18,7 @@ export default function AnalyticsTab({ tenantId }: AnalyticsTabProps) {
   const { data: stats, isLoading: statsLoading } = useQueryStats(tenantId, timeRange)
   const { data: topQueries, isLoading: topLoading } = useTopQueries(tenantId)
   const { data: unanswered, isLoading: unansweredLoading } = useUnansweredQueries(tenantId)
+  const { data: dailyUsage, isLoading: usageLoading } = useDailyUsage(tenantId)
 
   const isLoading = botLoading || statsLoading
 
@@ -27,6 +29,7 @@ export default function AnalyticsTab({ tenantId }: AnalyticsTabProps) {
           <Skeleton className="h-8 w-64 mb-2" />
           <Skeleton className="h-4 w-48" />
         </div>
+        <Skeleton className="h-24" /> {/* Daily usage card */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-32" />
@@ -71,6 +74,58 @@ export default function AnalyticsTab({ tenantId }: AnalyticsTabProps) {
           </Select>
         </div>
       </div>
+
+      {/* Daily Usage Alert */}
+      {dailyUsage && !usageLoading && (
+        <div className={`p-4 border rounded-lg ${
+          dailyUsage.remaining === 0 
+            ? 'bg-red-50 border-red-200' 
+            : dailyUsage.remaining <= 10 
+            ? 'bg-yellow-50 border-yellow-200' 
+            : 'bg-blue-50 border-blue-200'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Zap className={`w-5 h-5 ${
+                dailyUsage.remaining === 0 
+                  ? 'text-red-600' 
+                  : dailyUsage.remaining <= 10 
+                  ? 'text-yellow-600' 
+                  : 'text-blue-600'
+              }`} />
+              <div>
+                <p className="font-medium text-gray-900">
+                  Daily Usage: {dailyUsage.current} / {dailyUsage.limit} queries
+                </p>
+                <p className="text-sm text-gray-600">
+                  {dailyUsage.remaining > 0 
+                    ? `${dailyUsage.remaining} queries remaining today` 
+                    : 'Daily limit reached. Resets at midnight UTC.'}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-gray-900">
+                {Math.round((dailyUsage.current / dailyUsage.limit) * 100)}%
+              </div>
+              <div className="text-xs text-gray-500">used</div>
+            </div>
+          </div>
+          {/* Progress bar */}
+          <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
+            <div 
+              className={`h-2 rounded-full transition-all ${
+                dailyUsage.remaining === 0 
+                  ? 'bg-red-600' 
+                  : dailyUsage.remaining <= 10 
+                  ? 'bg-yellow-600' 
+                  : 'bg-blue-600'
+              }`}
+              style={{ width: `${Math.min((dailyUsage.current / dailyUsage.limit) * 100, 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

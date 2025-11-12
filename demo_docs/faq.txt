@@ -1,0 +1,497 @@
+# Weaver Frequently Asked Questions (FAQ)
+
+## General Questions
+
+### What is Weaver?
+
+Weaver is an AI-powered platform that transforms your documents into intelligent chatbots. Upload your PDFs, DOCX files, or other documents, and Weaver creates a bot that can answer questions based on that content using advanced RAG (Retrieval-Augmented Generation) technology.
+
+### How is Weaver different from ChatGPT?
+
+While ChatGPT is a general-purpose AI trained on internet data, Weaver creates bots trained specifically on YOUR documents. This means:
+- Answers come from your content, not the internet
+- No hallucinations or made-up information
+- Every answer cites the source document
+- You control what knowledge the bot has
+- Perfect for business-specific information
+
+### Do I need coding experience to use Weaver?
+
+No! Weaver is designed for non-technical users. Our dashboard provides:
+- Drag-and-drop document upload
+- Visual bot configuration with AI-generated prompts
+- Point-and-click API key management
+- Built-in test interface
+
+Developers can use our REST API for advanced integrations.
+
+### What document formats are supported?
+
+Weaver supports:
+- PDF (.pdf)
+- Microsoft Word (.docx)
+- Plain text (.txt)
+- HTML (.html)
+
+More formats coming soon (PowerPoint, Excel, Markdown).
+
+### Is there a free tier?
+
+Yes! The free tier includes:
+- 50 queries per day
+- 10 documents maximum
+- 100 MB storage
+- Email support
+- Full API access
+
+## Getting Started
+
+### How do I create my first bot?
+
+1. Sign up at weaver.com using Google OAuth
+2. Upload your first document (PDF, DOCX, TXT, or HTML)
+3. Wait for processing (usually 1-3 minutes)
+4. Generate an API key in the API Keys tab
+5. Test your bot using the built-in test panel
+6. Integrate using our REST API
+
+### How long does document processing take?
+
+Processing time depends on document size:
+- Small documents (< 10 pages): 30 seconds - 1 minute
+- Medium documents (10-50 pages): 1-3 minutes
+- Large documents (50-100 pages): 3-5 minutes
+- Very large documents (100+ pages): 5-10 minutes
+
+You can upload multiple documents and they'll process in parallel.
+
+### Can I customize my bot's personality?
+
+Absolutely! Go to the "Bot Settings" tab and describe your business:
+- Business name and industry
+- What your business does
+- Desired tone (Professional, Friendly, Technical, Casual, Formal)
+- Primary goal for the bot
+- Special instructions
+
+Weaver's AI will generate an optimal system prompt in seconds. You can edit it or regenerate it as needed.
+
+### How do I test my bot before deploying?
+
+Use the built-in "Test Your Bot" panel in the API Keys tab:
+1. Paste an API key
+2. Enter a test question
+3. Choose streaming or non-streaming mode
+4. Click "Run Test"
+5. See results instantly
+
+You can also test the demo bot to see how Weaver works before uploading your own documents.
+
+## Technical Questions
+
+### What AI models does Weaver use?
+
+Weaver uses Google's Gemini models:
+- **gemini-2.5-flash-lite**: For generating answers (fast, cost-effective)
+- **gemini-embedding-001**: For creating document embeddings (768 dimensions)
+
+We may add support for other models (OpenAI, Anthropic) in the future.
+
+### How does RAG work?
+
+RAG (Retrieval-Augmented Generation) works in three steps:
+
+1. **Indexing**: Your documents are split into chunks and converted to vector embeddings
+2. **Retrieval**: When a question is asked, the most relevant chunks are found using semantic search
+3. **Generation**: The AI generates an answer based on the retrieved context
+
+This ensures answers are accurate and based on your actual documents.
+
+### What's the average response time?
+
+Typical query latency:
+- **Cached queries**: < 100ms
+- **Non-cached queries**: 1.5 - 3 seconds
+  - Embedding generation: 50-100ms
+  - Vector search: 100-200ms
+  - LLM generation: 1-2 seconds
+
+Streaming responses start appearing within 500ms.
+
+### How accurate are the answers?
+
+Accuracy depends on several factors:
+- **Document quality**: Clear, well-written docs produce better results
+- **Question specificity**: Specific questions get better answers than vague ones
+- **Document coverage**: Bot can only answer based on uploaded content
+
+Weaver provides confidence scores:
+- **High**: Multiple relevant sources found (>0.7 similarity)
+- **Medium**: Some relevant sources (0.5-0.7 similarity)
+- **Low**: Few relevant sources (< 0.5 similarity)
+
+### Is my data secure?
+
+Yes! Weaver implements multiple security layers:
+- All data encrypted at rest and in transit (TLS 1.3)
+- Secure multi-tenant architecture (your data is isolated)
+- API key authentication with rate limiting
+- SOC 2 Type II compliant infrastructure
+- GDPR compliant data processing
+- Regular security audits
+
+We never train models on your data or share it with third parties.
+
+## Usage & Limits
+
+### What are the rate limits?
+
+Free tier limits:
+- 60 API requests per minute per key
+- 50 queries per day per tenant
+- 10 documents maximum
+- 100 MB total storage
+
+Pro tier limits:
+- 120 API requests per minute
+- 1,000 queries per day
+- Unlimited documents
+- 10 GB storage
+
+### What happens when I hit the daily query limit?
+
+When you reach 50 queries in a day:
+- Further queries return a 429 error
+- Limit resets at midnight UTC
+- You can upgrade to Pro for higher limits
+
+The dashboard shows your current usage: "12/50 queries used today"
+
+### Can I upload documents in bulk?
+
+Yes! You can upload multiple documents at once:
+- Drag and drop multiple files
+- Click "Select Multiple Files"
+- Up to 10 files at once (free tier)
+- Processing happens in parallel
+
+### How is storage calculated?
+
+Storage is based on the original document size:
+- A 5 MB PDF counts as 5 MB
+- Processed data (embeddings, chunks) doesn't count toward storage
+- Deleted documents free up storage immediately
+
+### Can I delete documents?
+
+Yes, you can delete documents from the dashboard:
+1. Go to "Upload Documents" tab
+2. Click the trash icon next to any document
+3. Confirm deletion
+4. Document is removed immediately
+5. Storage is freed up
+
+Note: This cannot be undone. The bot will no longer have access to that document's content.
+
+## API & Integration
+
+### How do I get an API key?
+
+1. Log into your Weaver dashboard
+2. Go to the "API Keys" tab
+3. Click "Create New API Key"
+4. Give it a name (e.g., "Production Key")
+5. Copy the key immediately (it won't be shown again)
+6. Use it in the Authorization header: `Bearer YOUR_API_KEY`
+
+### Can I have multiple API keys?
+
+Yes! Create as many API keys as needed:
+- Separate keys for development/staging/production
+- Keys for different applications
+- Keys with different names for tracking
+
+Each key has the same permissions and rate limits.
+
+### How do I revoke a compromised API key?
+
+1. Go to the "API Keys" tab
+2. Find the compromised key
+3. Click the trash icon
+4. Confirm revocation
+5. Key is immediately invalidated
+
+Create a new key to replace it.
+
+### What programming languages are supported?
+
+Weaver's REST API works with any language that can make HTTP requests:
+- JavaScript/TypeScript (examples provided)
+- Python (examples provided)
+- cURL (command-line examples)
+- Ruby, Go, Java, PHP, etc. (use standard HTTP libraries)
+
+Official SDKs coming soon for JavaScript, Python, and Go.
+
+### Can I integrate Weaver into my mobile app?
+
+Yes! Weaver's REST API works from:
+- Web applications (React, Vue, Angular, etc.)
+- Mobile apps (React Native, Flutter, Swift, Kotlin)
+- Backend services (Node.js, Python, Go, etc.)
+- Desktop applications (Electron, etc.)
+
+Never expose your API key in client-side code. Use a backend proxy.
+
+### Does Weaver support streaming responses?
+
+Yes! Use the streaming endpoint for real-time responses:
+
+```
+GET /v1/tenants/{tenant_id}/query/stream?query=YOUR_QUESTION
+Accept: text/event-stream
+```
+
+Responses arrive token-by-token via Server-Sent Events (SSE).
+
+## Billing & Pricing
+
+### How does the free tier work?
+
+The free tier is completely free, forever:
+- No credit card required
+- 50 queries per day
+- 10 documents
+- 100 MB storage
+- All features available
+
+Perfect for testing and small projects.
+
+### When should I upgrade to Pro?
+
+Upgrade to Pro if you need:
+- More than 50 queries per day
+- More than 10 documents
+- More than 100 MB storage
+- Priority support
+- Custom branding (coming soon)
+
+### Is there an Enterprise plan?
+
+Yes! Enterprise includes:
+- Unlimited queries
+- Unlimited documents
+- Unlimited storage
+- Dedicated support
+- SLA guarantees
+- On-premise deployment option
+- Custom integrations
+
+Contact sales@weaver.com for pricing.
+
+### How is overage handled?
+
+Free tier:
+- Queries stop at 50/day limit
+- Cannot upload documents beyond storage limit
+- Upgrade to Pro to continue
+
+Pro tier:
+- Soft limits with overage charges
+- $0.01 per additional query
+- $0.10 per GB of additional storage
+
+### Can I downgrade from Pro to Free?
+
+Yes, but:
+- Takes effect at the end of current billing period
+- Documents beyond 10 must be deleted
+- Storage beyond 100 MB must be freed
+- Query limit drops to 50/day
+
+## Troubleshooting
+
+### Why is my document still processing?
+
+Documents can take 1-10 minutes depending on size. If stuck for longer:
+1. Check the document format is supported
+2. Ensure the file isn't corrupted
+3. Verify it's under the size limit (10 MB)
+4. Refresh the page
+5. Contact support if still stuck
+
+### Why am I getting "low confidence" answers?
+
+Low confidence means the bot couldn't find highly relevant information. Possible causes:
+- Question is about content not in your documents
+- Documents don't contain enough detail
+- Question is too vague or broad
+- Typos in the question
+
+Solutions:
+- Upload more comprehensive documentation
+- Ask more specific questions
+- Check the Analytics tab for low-confidence queries
+- Refine your documents based on common questions
+
+### Why am I getting 401 Unauthorized errors?
+
+Common causes:
+- API key is incorrect or expired
+- API key was revoked
+- Missing "Bearer" prefix in Authorization header
+- Using session token instead of API key
+
+Check your API key in the dashboard and ensure it's correctly formatted:
+```
+Authorization: Bearer sk_live_abc123...
+```
+
+### Why am I getting 429 Rate Limit errors?
+
+You've exceeded either:
+- **Minute limit**: 60 requests per minute per key (wait 1 minute)
+- **Daily limit**: 50 queries per day (wait until midnight UTC or upgrade)
+
+Check the error message for details.
+
+### My bot isn't using my custom system prompt
+
+Ensure you:
+1. Generated a system prompt in "Bot Settings"
+2. Clicked "Save & Activate Bot"
+3. Waited for the save to complete
+4. Refreshed your API client/cache
+
+The prompt applies immediately to new queries.
+
+## Advanced Features
+
+### Can I use Weaver for multiple languages?
+
+Currently, Weaver works best with English documents. Support for other languages coming soon:
+- Spanish
+- French
+- German
+- Japanese
+- And more
+
+### Can I fine-tune the bot's behavior?
+
+Yes, through the system prompt in "Bot Settings":
+- Define the bot's role and personality
+- Specify tone and style
+- Add disclaimers or policies
+- Include special instructions
+
+### Does Weaver support images or tables in documents?
+
+Partial support:
+- **Text in images**: Not yet (OCR coming soon)
+- **Tables**: Text is extracted but formatting may be lost
+- **Charts/Graphs**: Not yet (multimodal RAG coming soon)
+
+Best results with text-heavy documents.
+
+### Can I see what documents were used to answer a question?
+
+Yes! Every response includes sources:
+```json
+"sources": [
+  {
+    "doc_id": "abc-123",
+    "page": 5,
+    "confidence": 0.92
+  }
+]
+```
+
+Use the doc_id to identify which document was used.
+
+### Can I export my data?
+
+Yes, contact support@weaver.com to request:
+- Document export (original files)
+- Query logs (CSV format)
+- Analytics data
+
+Enterprise plans include self-service export.
+
+## Support & Community
+
+### How do I get help?
+
+Multiple support channels:
+- **Documentation**: docs.weaver.com
+- **Email**: support@weaver.com (24-48 hour response)
+- **Community Forum**: community.weaver.com
+- **Discord**: discord.gg/weaver
+- **Status Page**: status.weaver.com
+
+Pro users get priority support (4-12 hour response).
+
+### Is there a community forum?
+
+Yes! Join community.weaver.com to:
+- Ask questions
+- Share use cases
+- Get integration help
+- Vote on feature requests
+- Connect with other users
+
+### How do I request a new feature?
+
+Three ways:
+1. Submit feedback in the dashboard
+2. Post in the community forum
+3. Email feature-requests@weaver.com
+
+We prioritize features based on user votes and business impact.
+
+### Where can I report bugs?
+
+Report bugs via:
+- **Email**: bugs@weaver.com
+- **Dashboard**: Click "Report Bug" in menu
+- **Discord**: #bug-reports channel
+
+Include steps to reproduce for faster resolution.
+
+### Can I schedule a demo?
+
+Yes! Contact sales@weaver.com to schedule:
+- Platform walkthrough
+- Custom integration consultation
+- Enterprise features demo
+
+## Future Features
+
+### What's on the roadmap?
+
+Coming in 2025:
+- Multi-language support
+- Image and table understanding
+- Webhook integrations
+- Slack and Discord bots
+- Mobile SDKs
+- Advanced analytics with A/B testing
+- Custom domain support
+- White-labeling
+- Voice interaction
+- Fine-tuning support
+
+Vote on features at roadmap.weaver.com
+
+### Will prices change?
+
+Current pricing is locked for early users. We'll announce any changes with:
+- 90 days notice
+- Grandfather pricing for existing users
+- Migration assistance
+
+---
+
+Still have questions? Email hello@weaver.com
+
+Last Updated: November 2024 | Version 1.0
+

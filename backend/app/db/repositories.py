@@ -327,7 +327,29 @@ class BotRepository:
                 "name": bot.name,
                 "config": bot.config_json,
                 "created_at": bot.created_at,
+                "updated_at": bot.updated_at,
             }
+    
+    # Alias for compatibility
+    async def get_by_tenant(self, tenant_id: UUID) -> Optional[dict]:
+        return await self.get_by_tenant_id(tenant_id)
+    
+    async def update_config(self, tenant_id: UUID, config: dict) -> None:
+        """Update bot configuration (system_prompt, business_info, etc.)"""
+        from sqlalchemy import update
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(
+                update(Bot)
+                .where(Bot.tenant_id == tenant_id)
+                .values(
+                    config_json=config,
+                    updated_at=func.now()
+                )
+            )
+            await session.commit()
+            
+            if result.rowcount == 0:
+                raise ValueError("Bot not found")
 
 
 class QueryLogRepository:

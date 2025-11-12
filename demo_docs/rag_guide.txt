@@ -1,0 +1,302 @@
+# Understanding RAG: Retrieval-Augmented Generation
+
+## Introduction
+
+RAG (Retrieval-Augmented Generation) is a powerful AI technique that combines the best of two worlds: information retrieval and natural language generation. This guide explains how RAG works and why it's the foundation of Weaver's intelligent bot platform.
+
+## What is RAG?
+
+RAG is an AI framework that enhances large language models (LLMs) by giving them access to external knowledge sources. Instead of relying solely on the model's training data, RAG retrieves relevant information from a knowledge base and uses it to generate accurate, contextual responses.
+
+### The Problem RAG Solves
+
+Traditional LLMs have several limitations:
+- **Knowledge Cutoff**: They only know information up to their training date
+- **Hallucinations**: They may generate plausible but incorrect information
+- **No Source Citations**: Users can't verify where information came from
+- **Static Knowledge**: They can't be updated with new information without retraining
+
+RAG addresses all these issues by grounding responses in actual documents.
+
+## How RAG Works: The Three-Phase Process
+
+### Phase 1: Indexing (Offline)
+
+This happens when you upload documents to Weaver:
+
+1. **Document Ingestion**
+   - Documents are uploaded (PDF, DOCX, TXT, HTML)
+   - Text is extracted from various formats
+   - Content is cleaned and preprocessed
+
+2. **Text Chunking**
+   - Documents are split into smaller, semantic chunks (500 tokens)
+   - Overlap between chunks ensures context continuity (10% overlap)
+   - Each chunk maintains metadata (document ID, page number)
+
+3. **Embedding Generation**
+   - Each text chunk is converted into a vector (numerical representation)
+   - Weaver uses Google's gemini-embedding-001 model
+   - Creates 768-dimensional vectors that capture semantic meaning
+
+4. **Vector Storage**
+   - Embeddings are stored in PostgreSQL with pgvector extension
+   - HNSW (Hierarchical Navigable Small World) index for fast retrieval
+   - Optimized for similarity search at scale
+
+### Phase 2: Retrieval (Real-Time)
+
+When a user asks a question:
+
+1. **Query Embedding**
+   - User's question is converted to a vector using the same embedding model
+   - Ensures query and documents are in the same semantic space
+   - Takes ~50-100ms to generate
+
+2. **Similarity Search**
+   - Query vector is compared against all document vectors
+   - Uses cosine similarity to find most relevant chunks
+   - HNSW index enables sub-second search across millions of vectors
+   - Top K most similar chunks are retrieved (default K=3)
+
+3. **Context Assembly**
+   - Retrieved chunks are ranked by similarity score
+   - Text from top chunks is assembled into context
+   - Metadata (document name, page number) is preserved
+
+### Phase 3: Generation (Real-Time)
+
+Generating the final answer:
+
+1. **Prompt Construction**
+   - System prompt defines bot behavior
+   - Retrieved context is injected into the prompt
+   - User's question is included
+   - Prompt instructs LLM to cite sources
+
+2. **LLM Invocation**
+   - Complete prompt sent to Google Gemini (gemini-2.5-flash-lite)
+   - LLM generates answer based on provided context
+   - Can stream response in real-time using SSE
+
+3. **Response Assembly**
+   - Generated answer is extracted
+   - Source citations are attached
+   - Confidence score calculated
+   - Latency metrics recorded
+
+## Key RAG Concepts
+
+### Embeddings
+
+Embeddings are dense vector representations of text that capture semantic meaning. Similar concepts have similar vectors, enabling semantic search.
+
+**Example:**
+- "How do I reset my password?" 
+- "What's the process for password recovery?"
+
+These questions have different words but similar embeddings, so RAG retrieves the same relevant documentation.
+
+### Semantic Search vs. Keyword Search
+
+**Keyword Search:**
+- Matches exact words
+- Query: "car repair" won't find "automobile maintenance"
+- Fast but limited understanding
+
+**Semantic Search (RAG):**
+- Matches meaning
+- Query: "car repair" finds "automobile maintenance", "vehicle servicing"
+- Understands synonyms, context, intent
+
+### Vector Similarity Metrics
+
+Weaver uses cosine similarity to measure how "close" two vectors are:
+- Score ranges from 0 (completely different) to 1 (identical)
+- High scores (>0.7) indicate strong relevance
+- Low scores (<0.5) suggest weak relevance
+
+### Chunking Strategy
+
+Why chunk documents?
+
+1. **LLM Context Limits**: Models have token limits (e.g., 8,192 tokens)
+2. **Precision**: Smaller chunks = more precise retrieval
+3. **Performance**: Faster to search through smaller units
+4. **Quality**: More relevant context = better answers
+
+Weaver's chunking:
+- 500 tokens per chunk (optimal for most use cases)
+- 10% overlap between chunks (preserves context)
+- Respects sentence boundaries (no mid-sentence cuts)
+
+## RAG vs. Fine-Tuning
+
+### RAG (Retrieval-Augmented Generation)
+**Pros:**
+- Instant knowledge updates (just upload new docs)
+- Source attribution (always cite sources)
+- Lower cost (no model training)
+- Transparent (see what documents were used)
+- Flexible (different knowledge bases per tenant)
+
+**Cons:**
+- Retrieval latency (1-3 seconds)
+- Dependent on chunk quality
+- Requires vector database infrastructure
+
+### Fine-Tuning
+**Pros:**
+- Faster inference (no retrieval step)
+- Can teach writing style and tone
+- Smaller models possible
+
+**Cons:**
+- Expensive (requires GPU training)
+- Time-consuming (days to weeks)
+- Static knowledge (must retrain for updates)
+- No source attribution
+- Hallucination risk remains
+
+**Weaver's Approach:** We use RAG because most businesses need dynamic, verifiable knowledge bases, not style adaptation.
+
+## Advanced RAG Techniques in Weaver
+
+### 1. HNSW Indexing
+- Approximate nearest neighbor search
+- Sub-linear search time
+- Parameters: m=32, ef_construction=128
+- Balances speed and accuracy
+
+### 2. Caching
+- Redis caches embeddings (1 hour TTL)
+- Query results cached (5 minutes TTL)
+- Reduces costs and latency for repeated queries
+
+### 3. Confidence Scoring
+- High confidence: Multiple relevant chunks, high similarity
+- Medium confidence: Some relevant chunks
+- Low confidence: No highly relevant chunks found
+
+### 4. Streaming Responses
+- Server-Sent Events (SSE) for real-time output
+- Users see answers as they're generated
+- Improves perceived latency
+
+## RAG Best Practices
+
+### For Better Results:
+
+1. **Quality Documents**
+   - Well-structured content
+   - Clear headings and sections
+   - Avoid scanned images without OCR
+   - Update outdated information
+
+2. **Specific Questions**
+   - "How do I reset my password?" (Good)
+   - "Tell me about passwords" (Too broad)
+
+3. **Monitor Analytics**
+   - Track low-confidence queries
+   - Identify knowledge gaps
+   - Add missing documentation
+
+4. **Iterative Improvement**
+   - Review unanswered questions
+   - Refine document structure
+   - Test with real user queries
+
+### Common Pitfalls:
+
+1. **Too Much Context**
+   - Don't upload everything at once
+   - Focus on relevant, high-quality docs
+   - Remove duplicates
+
+2. **Poor Document Quality**
+   - Scanned PDFs without text layer
+   - Inconsistent formatting
+   - Outdated information
+
+3. **Unrealistic Expectations**
+   - RAG retrieves from your docs only
+   - Can't infer information not present
+   - Best for factual Q&A, not creative writing
+
+## RAG Performance Metrics
+
+### Weaver's RAG Performance:
+
+- **Average Query Latency**: 1.5-3 seconds
+- **Embedding Generation**: 50-100ms
+- **Vector Search**: 100-200ms
+- **LLM Generation**: 1-2 seconds
+- **Cache Hit Rate**: 40-60% (typical)
+
+### Optimization Strategies:
+
+1. **Embedding Cache**: Reuse embeddings for identical queries
+2. **Connection Pooling**: Reduce database overhead
+3. **Batch Processing**: Process multiple documents efficiently
+4. **Index Optimization**: Regular ANALYZE on vector indices
+
+## RAG Use Cases
+
+### Customer Support Automation
+- Answer FAQs from help documentation
+- Provide troubleshooting steps
+- Reduce ticket volume by 30-50%
+
+### Internal Knowledge Management
+- Search across company wikis, policies, procedures
+- Onboard new employees faster
+- Reduce "where is that document?" questions
+
+### Developer Documentation
+- API reference search
+- Code example lookup
+- Integration guide assistance
+
+### Compliance & Legal
+- Policy interpretation
+- Regulatory guidance
+- Contract clause search
+
+### Research & Education
+- Literature review assistance
+- Course material Q&A
+- Study guide generation
+
+## Future of RAG
+
+### Emerging Trends:
+
+1. **Hybrid Search**: Combining semantic and keyword search
+2. **Multi-Modal RAG**: Including images, tables, charts
+3. **Conversational RAG**: Multi-turn dialogues with context
+4. **Agentic RAG**: AI agents that can navigate and reason over documents
+5. **Personalized RAG**: User-specific retrieval based on history
+
+### Weaver's Roadmap:
+
+- Multi-language embedding support
+- Advanced chunk strategies (recursive splitting)
+- Query rewriting for better retrieval
+- Feedback loops for continuous improvement
+
+## Conclusion
+
+RAG is the foundation of modern knowledge bots. By combining retrieval with generation, it delivers accurate, verifiable, and up-to-date answers from your documents. Weaver makes RAG accessible to everyone through a simple, powerful platform.
+
+## Learn More
+
+- Read "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks" (Lewis et al., 2020)
+- Explore Weaver's API documentation for integration examples
+- Join our community forum to share RAG tips and tricks
+
+---
+
+Understanding RAG is key to building effective knowledge bots.
+Version 1.0 | Last Updated: November 2024
+

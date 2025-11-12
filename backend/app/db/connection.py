@@ -6,9 +6,15 @@ from app.config import settings
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.ENVIRONMENT == "development",
-    pool_size=10,
-    max_overflow=20,
+    pool_size=20, 
+    max_overflow=40, 
     pool_pre_ping=True,
+    pool_recycle=3600,  
+    connect_args={
+        "server_settings": {
+            "jit": "off"  # Disable JIT for faster simple queries
+        }
+    }
 )
 
 AsyncSessionLocal = async_sessionmaker(

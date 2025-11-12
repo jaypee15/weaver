@@ -19,12 +19,18 @@ Weaver enables businesses to create and deploy AI customer-service bots trained 
 ## Features
 
 - One bot per tenant architecture
+- **AI-powered bot configuration** - Generate system prompts from simple business info (no prompt engineering needed)
+- **Shared demo bot** for instant user onboarding (no document upload required)
 - API key authentication
 - Document ingestion (PDF, DOCX, TXT, HTML)
 - RAG-based query answering
 - Rate limiting (60 rpm per key)
+- **Daily query limits** (50 queries/day, configurable)
 - Real-time streaming responses
 - Analytics dashboard
+- **High-performance query engine (1.5-3s average latency)**
+- **Redis caching for embeddings and queries**
+- **Optimized HNSW vector search**
 
 ## Setup
 
@@ -130,6 +136,38 @@ DELETE /v1/tenants/{tenant_id}/api-keys/{key_id}
 Authorization: Bearer <SESSION_TOKEN>
 ```
 
+### Configure Bot Personality
+
+```bash
+# Generate system prompt from business info (AI-powered)
+POST /v1/tenants/{tenant_id}/bot/generate-prompt
+Authorization: Bearer <SESSION_TOKEN>
+Content-Type: application/json
+
+{
+  "business_name": "Acme Corp",
+  "industry": "E-commerce",
+  "description": "We sell premium widgets online",
+  "tone": "friendly",
+  "primary_goal": "Help customers find products",
+  "special_instructions": "Always mention free shipping over $50"
+}
+
+# Update bot configuration
+PUT /v1/tenants/{tenant_id}/bot
+Authorization: Bearer <SESSION_TOKEN>
+Content-Type: application/json
+
+{
+  "system_prompt": "You are Acme Corp's AI assistant...",
+  "business_info": { ... }
+}
+```
+
+**See also:**
+- `BOT_SETTINGS_QUICK_START.md` - User guide
+- `BUSINESS_INFO_PROMPT_GENERATION.md` - Technical details
+
 ## Deployment
 
 ### Build Docker Images
@@ -184,6 +222,46 @@ pytest tests/
 - Prometheus metrics: `/metrics`
 - Health check: `/health`
 - Sentry for error tracking
+- Performance logs: `docker logs weaver-api-1 | grep "Query performance"`
+- Cache metrics: `docker exec -it weaver-redis-1 redis-cli INFO stats`
+
+## Performance
+
+Weaver is optimized for production use with:
+- **1.5-3s average query latency** (down from 10.9s)
+- **<100ms for cached queries**
+- **40-60% cost reduction** on LLM/embedding API calls
+- **Redis caching** for embeddings and full query results
+- **Optimized HNSW index** for fast vector search
+- **Efficient connection pooling** and database indexes
+
+For details, see:
+- `PERFORMANCE_OPTIMIZATIONS.md` - Technical documentation
+- `APPLY_PERFORMANCE_FIXES.md` - Quick start guide
+- `PERFORMANCE_CHANGES_SUMMARY.md` - Changes overview
+
+## Demo Bot
+
+Weaver includes a **shared demo bot** that allows new users to test the platform immediately without uploading documents.
+
+### Key Features
+- ✅ All users can query the demo bot using their own API keys
+- ✅ Queries count toward the user's personal daily limit (50/day)
+- ✅ No setup required - works right after signup
+- ✅ Helps users understand RAG capabilities before uploading own docs
+- ✅ Seamless switch between demo bot and own bot
+
+### Setup
+1. Create admin user in Supabase Dashboard
+2. Set `DEMO_BOT_ADMIN_UUID` and `DEMO_BOT_ADMIN_EMAIL` in `.env`
+3. Run migrations: `docker-compose exec api alembic upgrade head`
+4. Login as admin and upload demo content (PDFs about Weaver, RAG, API docs)
+5. Users can now select "Demo Bot" in the API Keys tab
+
+For complete setup instructions, see:
+- `DEMO_BOT_ADMIN_SETUP.md` - Quick start (5 minutes)
+- `DEMO_BOT_SETUP.md` - Comprehensive guide
+- `DEMO_BOT_IMPLEMENTATION.md` - Technical overview
 
 ## License
 

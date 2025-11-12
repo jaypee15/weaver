@@ -162,7 +162,7 @@ def upgrade() -> None:
         RETURNS TRIGGER AS $$
         BEGIN
             INSERT INTO bots (id, tenant_id, name, config_json)
-            VALUES (NEW.id, NEW.id, NEW.name || ' Bot', '{"temperature": 0.2, "top_k": 8}')
+            VALUES (NEW.id, NEW.id, NEW.name || ' Bot', '{}')
             ON CONFLICT (tenant_id) DO NOTHING;
             RETURN NEW;
         END;

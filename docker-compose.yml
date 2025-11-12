@@ -26,6 +26,7 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=${DATABASE_URL}
+      - WORKER_DATABASE_URL=${WORKER_DATABASE_URL}
       - REDIS_URL=redis://redis:6379/0
       - RUN_MIGRATIONS=true
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
@@ -36,6 +37,11 @@ services:
       - SUPABASE_KEY=${SUPABASE_KEY}
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - MAX_QUERIES_PER_DAY=${MAX_QUERIES_PER_DAY:-50}
+      - DEMO_BOT_TENANT_ID=${DEMO_BOT_TENANT_ID:-00000000-0000-0000-0000-000000000000}
+      - DEMO_BOT_ENABLED=${DEMO_BOT_ENABLED:-true}
+      - DEMO_BOT_ADMIN_UUID=${DEMO_BOT_ADMIN_UUID:-}
+      - DEMO_BOT_ADMIN_EMAIL=${DEMO_BOT_ADMIN_EMAIL:-admin@weaver.com}
     depends_on:
       redis:
         condition: service_healthy
@@ -54,6 +60,7 @@ services:
     container_name: weaver-worker
     environment:
       - DATABASE_URL=${DATABASE_URL}
+      - WORKER_DATABASE_URL=${WORKER_DATABASE_URL}
       - REDIS_URL=redis://redis:6379/0
       - REDIS_HOST=redis
       - REDIS_PORT=6379

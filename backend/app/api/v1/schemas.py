@@ -30,11 +30,19 @@ class Source(BaseModel):
     confidence: float
 
 
+class DailyUsage(BaseModel):
+    current: int
+    limit: int
+    remaining: int
+    redis_available: bool
+
+
 class QueryResponse(BaseModel):
     answer: str
     sources: List[Source]
     confidence: str
     latency_ms: int
+    daily_usage: Optional[DailyUsage] = None
 
 
 class APIKeyCreate(BaseModel):
@@ -90,4 +98,33 @@ class BotConfigResponse(BaseModel):
     name: str
     config: dict
     created_at: datetime
+
+
+class BusinessInfoRequest(BaseModel):
+    business_name: str = Field(..., min_length=1, max_length=255)
+    industry: str = Field(..., min_length=1, max_length=255)
+    description: str = Field(..., min_length=10, max_length=1000)
+    tone: str = Field(..., pattern="^(professional|friendly|technical|casual|formal)$")
+    primary_goal: str = Field(..., min_length=5, max_length=500)
+    special_instructions: Optional[str] = Field(None, max_length=500)
+
+
+class GeneratedPromptResponse(BaseModel):
+    system_prompt: str
+    business_info: dict
+
+
+class BotConfigUpdate(BaseModel):
+    system_prompt: Optional[str] = Field(None, max_length=2000)
+    business_info: Optional[dict] = None
+
+
+class BotSettingsResponse(BaseModel):
+    tenant_id: str
+    name: str
+    system_prompt: Optional[str] = None
+    business_info: Optional[dict] = None
+    using_default_prompt: bool
+    created_at: str
+    updated_at: str
 

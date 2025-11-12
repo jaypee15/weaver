@@ -12,6 +12,12 @@ from app.services.embeddings import EmbeddingService
 from app.services.storage import StorageService
 from app.db.repositories import DocumentRepository, ChunkRepository
 
+# Monkey-patch the repositories to use worker connection
+# This ensures workers use Transaction Mode (port 6543) with statement_cache_size=0
+from app.workers.db import WorkerAsyncSessionLocal
+from app.db import connection
+connection.AsyncSessionLocal = WorkerAsyncSessionLocal
+
 celery_app = Celery(
     "weaver",
     broker=settings.REDIS_URL,

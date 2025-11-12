@@ -1,0 +1,553 @@
+# Weaver API Integration Examples
+
+## Getting Started
+
+This guide provides practical examples for integrating Weaver's API into your applications. All examples use the REST API with API key authentication.
+
+## Prerequisites
+
+1. Weaver account with uploaded documents
+2. Generated API key from the dashboard
+3. Your tenant ID (found in dashboard URL)
+
+## Base URL
+
+```
+Production: https://api.weaver.com
+Development: http://localhost:8000
+```
+
+## Authentication
+
+All API requests require an API key in the Authorization header:
+
+```
+Authorization: Bearer YOUR_API_KEY
+```
+
+## Example 1: Simple Query (cURL)
+
+### Non-Streaming Query
+
+```bash
+curl -X POST https://api.weaver.com/v1/tenants/YOUR_TENANT_ID/query \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "How do I reset my password?"
+  }'
+```
+
+### Response
+
+```json
+{
+  "answer": "To reset your password, follow these steps: 1) Click the 'Forgot Password' link on the login page, 2) Enter your email address, 3) Check your email for a reset link, 4) Click the link and create a new password.",
+  "sources": [
+    {
+      "doc_id": "abc-123-def",
+      "page": 5,
+      "confidence": 0.92
+    }
+  ],
+  "confidence": "high",
+  "latency_ms": 1847,
+  "daily_usage": {
+    "current": 12,
+    "limit": 50,
+    "remaining": 38,
+    "redis_available": true
+  }
+}
+```
+
+## Example 2: Streaming Query (cURL)
+
+```bash
+curl -N -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: text/event-stream" \
+  "https://api.weaver.com/v1/tenants/YOUR_TENANT_ID/query/stream?query=What+is+your+pricing"
+```
+
+### Streaming Response (SSE)
+
+```
+data: {"content": "Our"}
+data: {"content": " pricing"}
+data: {"content": " structure"}
+data: {"content": " includes"}
+data: {"content": " three"}
+data: {"content": " tiers"}
+data: {"content": "..."}
+```
+
+## Example 3: JavaScript/TypeScript Integration
+
+### Simple Fetch
+
+```javascript
+async function queryBot(tenantId, apiKey, question) {
+  const response = await fetch(
+    `https://api.weaver.com/v1/tenants/${tenantId}/query`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query: question }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`API error: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data;
+}
+
+// Usage
+const result = await queryBot(
+  'your-tenant-id',
+  'your-api-key',
+  'How do I integrate the API?'
+);
+
+console.log('Answer:', result.answer);
+console.log('Confidence:', result.confidence);
+console.log('Sources:', result.sources);
+```
+
+### Streaming with EventSource
+
+```javascript
+function queryBotStreaming(tenantId, apiKey, question, onChunk, onComplete) {
+  const query = encodeURIComponent(question);
+  const url = `https://api.weaver.com/v1/tenants/${tenantId}/query/stream?query=${query}`;
+
+  const eventSource = new EventSource(url, {
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+    },
+  });
+
+  let fullAnswer = '';
+
+  eventSource.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    fullAnswer += data.content;
+    onChunk(data.content);
+  };
+
+  eventSource.addEventListener('done', () => {
+    eventSource.close();
+    onComplete(fullAnswer);
+  });
+
+  eventSource.onerror = (error) => {
+    console.error('Stream error:', error);
+    eventSource.close();
+  };
+
+  return eventSource;
+}
+
+// Usage
+const stream = queryBotStreaming(
+  'your-tenant-id',
+  'your-api-key',
+  'Explain your API rate limits',
+  (chunk) => console.log('Chunk:', chunk),
+  (fullAnswer) => console.log('Complete:', fullAnswer)
+);
+
+// To stop streaming
+// stream.close();
+```
+
+### React Component Example
+
+```typescript
+import { useState } from 'react';
+
+interface QueryResult {
+  answer: string;
+  sources: Array<{ doc_id: string; page: number; confidence: number }>;
+  confidence: string;
+  latency_ms: number;
+}
+
+export function ChatWidget({ tenantId, apiKey }: Props) {
+  const [query, setQuery] = useState('');
+  const [result, setResult] = useState<QueryResult | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleQuery = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `https://api.weaver.com/v1/tenants/${tenantId}/query`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query }),
+        }
+      );
+      const data = await response.json();
+      setResult(data);
+    } catch (error) {
+      console.error('Query failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="chat-widget">
+      <textarea
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Ask a question..."
+      />
+      <button onClick={handleQuery} disabled={loading}>
+        {loading ? 'Querying...' : 'Ask'}
+      </button>
+      {result && (
+        <div className="result">
+          <p>{result.answer}</p>
+          <small>Confidence: {result.confidence}</small>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+## Example 4: Python Integration
+
+### Simple Query
+
+```python
+import requests
+import json
+
+def query_bot(tenant_id, api_key, question):
+    url = f"https://api.weaver.com/v1/tenants/{tenant_id}/query"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    payload = {"query": question}
+    
+    response = requests.post(url, headers=headers, json=payload)
+    response.raise_for_status()
+    
+    return response.json()
+
+# Usage
+result = query_bot(
+    tenant_id="your-tenant-id",
+    api_key="your-api-key",
+    question="How do I authenticate with the API?"
+)
+
+print(f"Answer: {result['answer']}")
+print(f"Confidence: {result['confidence']}")
+print(f"Latency: {result['latency_ms']}ms")
+print(f"Daily usage: {result['daily_usage']['current']}/{result['daily_usage']['limit']}")
+```
+
+### Streaming Query
+
+```python
+import requests
+import json
+
+def query_bot_streaming(tenant_id, api_key, question):
+    url = f"https://api.weaver.com/v1/tenants/{tenant_id}/query/stream"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Accept": "text/event-stream"
+    }
+    params = {"query": question}
+    
+    response = requests.get(url, headers=headers, params=params, stream=True)
+    response.raise_for_status()
+    
+    full_answer = ""
+    for line in response.iter_lines():
+        if line:
+            line_str = line.decode('utf-8')
+            if line_str.startswith('data: '):
+                data = json.loads(line_str[6:])
+                content = data.get('content', '')
+                full_answer += content
+                print(content, end='', flush=True)
+    
+    print()  # New line
+    return full_answer
+
+# Usage
+answer = query_bot_streaming(
+    tenant_id="your-tenant-id",
+    api_key="your-api-key",
+    question="What are your integration options?"
+)
+```
+
+### Flask Integration
+
+```python
+from flask import Flask, request, jsonify
+import requests
+
+app = Flask(__name__)
+
+WEAVER_TENANT_ID = "your-tenant-id"
+WEAVER_API_KEY = "your-api-key"
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    user_query = request.json.get('query')
+    
+    if not user_query:
+        return jsonify({"error": "Query required"}), 400
+    
+    # Query Weaver bot
+    response = requests.post(
+        f"https://api.weaver.com/v1/tenants/{WEAVER_TENANT_ID}/query",
+        headers={
+            "Authorization": f"Bearer {WEAVER_API_KEY}",
+            "Content-Type": "application/json"
+        },
+        json={"query": user_query}
+    )
+    
+    if response.status_code != 200:
+        return jsonify({"error": "Bot query failed"}), 500
+    
+    result = response.json()
+    
+    return jsonify({
+        "answer": result['answer'],
+        "confidence": result['confidence'],
+        "sources": result['sources']
+    })
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+
+## Example 5: Document Upload
+
+```bash
+curl -X POST https://api.weaver.com/v1/tenants/YOUR_TENANT_ID/docs:upload \
+  -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
+  -F "file=@/path/to/document.pdf"
+```
+
+### Response
+
+```json
+{
+  "doc_id": "abc-123-def",
+  "filename": "document.pdf",
+  "status": "processing",
+  "upload_url": null
+}
+```
+
+## Example 6: API Key Management
+
+### Create API Key
+
+```bash
+curl -X POST https://api.weaver.com/v1/tenants/YOUR_TENANT_ID/api-keys \
+  -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Production Key",
+    "rate_limit_rpm": 60
+  }'
+```
+
+### Response
+
+```json
+{
+  "key_id": "key-789-xyz",
+  "key": "sk_live_abc123def456...",
+  "name": "Production Key",
+  "created_at": "2024-11-12T10:30:00Z"
+}
+```
+
+### List API Keys
+
+```bash
+curl https://api.weaver.com/v1/tenants/YOUR_TENANT_ID/api-keys \
+  -H "Authorization: Bearer YOUR_SESSION_TOKEN"
+```
+
+### Revoke API Key
+
+```bash
+curl -X DELETE https://api.weaver.com/v1/tenants/YOUR_TENANT_ID/api-keys/key-789-xyz \
+  -H "Authorization: Bearer YOUR_SESSION_TOKEN"
+```
+
+## Example 7: Error Handling
+
+### Rate Limit Exceeded
+
+```json
+{
+  "detail": "Rate limit exceeded. Maximum 60 requests per minute."
+}
+```
+
+### Daily Limit Exceeded
+
+```json
+{
+  "detail": "Daily query limit exceeded (50 queries/day). Resets at midnight UTC."
+}
+```
+
+### Missing API Key
+
+```json
+{
+  "detail": "Missing API key"
+}
+```
+
+### Invalid API Key
+
+```json
+{
+  "detail": "Invalid API key"
+}
+```
+
+### Robust Error Handling (JavaScript)
+
+```javascript
+async function queryBotWithErrorHandling(tenantId, apiKey, question) {
+  try {
+    const response = await fetch(
+      `https://api.weaver.com/v1/tenants/${tenantId}/query`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: question }),
+      }
+    );
+
+    if (response.status === 429) {
+      throw new Error('Rate limit exceeded. Please wait and try again.');
+    }
+
+    if (response.status === 401) {
+      throw new Error('Invalid API key. Please check your credentials.');
+    }
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Query failed');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Bot query error:', error);
+    throw error;
+  }
+}
+```
+
+## Example 8: Webhook Integration (Future)
+
+Coming soon: Webhooks for document processing completion, query events, and usage alerts.
+
+```javascript
+// Webhook endpoint example
+app.post('/webhooks/weaver', (req, res) => {
+  const event = req.body;
+  
+  switch (event.type) {
+    case 'document.processed':
+      console.log(`Document ${event.doc_id} processed successfully`);
+      break;
+    case 'query.completed':
+      console.log(`Query answered with ${event.confidence} confidence`);
+      break;
+    case 'usage.threshold':
+      console.log(`Usage at ${event.percentage}% of daily limit`);
+      break;
+  }
+  
+  res.sendStatus(200);
+});
+```
+
+## Best Practices
+
+### 1. Security
+- Never expose API keys in client-side code
+- Use environment variables for keys
+- Rotate keys periodically
+- Implement key-specific rate limits
+
+### 2. Performance
+- Cache responses for identical queries
+- Use streaming for long responses
+- Implement timeout handling
+- Monitor latency metrics
+
+### 3. User Experience
+- Show loading indicators during queries
+- Display confidence scores
+- Provide source citations
+- Handle errors gracefully
+
+### 4. Monitoring
+- Track query volume
+- Monitor error rates
+- Alert on daily limit approaching
+- Log slow queries for optimization
+
+## Rate Limits
+
+- **Per API Key**: 60 requests per minute
+- **Per Tenant**: 50 queries per day (configurable)
+- **Document Upload**: 10 MB per file
+- **Concurrent Requests**: 5 per API key
+
+## Support
+
+- API Documentation: https://api.weaver.com/docs
+- Status Page: https://status.weaver.com
+- Support Email: api-support@weaver.com
+- Discord Community: https://discord.gg/weaver
+
+## SDKs (Coming Soon)
+
+Official SDKs are in development:
+- JavaScript/TypeScript
+- Python
+- Go
+- Ruby
+- Java
+
+---
+
+Start building intelligent experiences with Weaver's API today!
+Version 1.0 | Last Updated: November 2024
+

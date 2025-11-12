@@ -4,7 +4,7 @@ set -e
 echo "🚀 Starting Weaver in DEVELOPMENT mode..."
 echo "   - Backend: Hot-reload enabled (volume mounted)"
 echo "   - Worker: Hot-reload enabled (volume mounted)"
-echo "   - Frontend: Hot-reload enabled (Next.js dev server)"
+echo "   - Frontend: Hot-reload enabled (Vite dev server)"
 echo ""
 
 # Start services with dev override
