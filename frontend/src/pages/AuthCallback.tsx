@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase.ts'
-import { apiClient } from '../lib/axios.ts'
+import { supabase } from '@/lib/supabase'
+import { apiClient } from '@/lib/axios'
 
 export default function AuthCallback() {
   const navigate = useNavigate()

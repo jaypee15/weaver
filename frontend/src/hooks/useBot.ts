@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { apiClient } from '../lib/axios.ts'
+import { apiClient } from '@/lib/axios'
 import { useAuthStore } from '../store/authStore'
 import type { BotConfig } from '../types'
 
