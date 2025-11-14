@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { User as SupabaseUser, Session, AuthChangeEvent } from '@supabase/supabase-js'
-import { supabase } from '../lib/supabase'
-import { apiClient } from '../lib/axios'
+import { supabase } from '../lib/supabase.ts'
+import { apiClient } from '../lib/axios.ts'
 import { User } from '../types'
 
 interface AuthState {

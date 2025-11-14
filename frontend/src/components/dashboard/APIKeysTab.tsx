@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Copy, Check, Trash2, Play, Square } from 'lucide-react'
-import { API_URL } from '../../lib/axios'
+import { API_URL } from '../../lib/axios.ts'
 import { toast } from 'sonner'
 import type { APIKey } from '@/types'
 
