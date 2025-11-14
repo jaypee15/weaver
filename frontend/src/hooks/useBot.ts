@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { apiClient } from '@/lib/axios'
-import { useAuthStore } from '@/store/authStore'
-import type { BotConfig } from '@/types'
+import { apiClient } from '../lib/axios'
+import { useAuthStore } from '../store/authStore'
+import type { BotConfig } from '../types'
 
 export function useBotConfig(tenantId: string | undefined) {
   const session = useAuthStore((state) => state.session)

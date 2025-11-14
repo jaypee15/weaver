@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { apiClient } from '@/lib/axios'
-import { useAuthStore } from '@/store/authStore'
-import type { QueryStatsResponse, TopQuery, UnansweredQuery } from '@/types'
+import { apiClient } from '../lib/axios'
+import { useAuthStore } from '../store/authStore'
+import type { QueryStatsResponse, TopQuery, UnansweredQuery } from '../types'
 
 export function useQueryStats(tenantId: string | undefined, days: string = '30') {
   const session = useAuthStore((state) => state.session)

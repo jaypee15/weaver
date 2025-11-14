@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { apiClient } from '@/lib/axios'
-import { useAuthStore } from '@/store/authStore'
-import { Document } from '@/types'
+import { apiClient } from '../lib/axios'
+import { useAuthStore } from '../store/authStore'
+import { Document } from '../types'
 
 export function useDocuments(tenantId: string | undefined) {
   const session = useAuthStore((state) => state.session)

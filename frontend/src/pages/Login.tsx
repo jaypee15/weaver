@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '@/store/authStore'
-import { supabase } from '@/lib/supabase'
-import { Button } from '@/components/ui/button'
+import { useAuthStore } from '../store/authStore'
+import { supabase } from '../lib/supabase'
+import { Button } from '../components/ui/button'
 
 export default function Login() {
   const navigate = useNavigate()
