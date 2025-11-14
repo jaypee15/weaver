@@ -67,6 +67,7 @@ jobs:
             VITE_SUPABASE_URL=${{ secrets.FRONTEND_VITE_SUPABASE_URL }}
             VITE_SUPABASE_ANON_KEY=${{ secrets.FRONTEND_VITE_SUPABASE_ANON_KEY }}
             VITE_SITE_URL=${{ secrets.FRONTEND_VITE_SITE_URL }}
+          no-cache: true
 
   deploy-api:
     needs: build-and-push
