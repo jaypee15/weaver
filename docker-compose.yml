@@ -1,21 +1,6 @@
 version: '3.8'
 
 services:
-  redis:
-    image: redis:7-alpine
-    container_name: weaver-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - weaver-network
-
   api:
     build:
       context: .
@@ -27,7 +12,7 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - WORKER_DATABASE_URL=${WORKER_DATABASE_URL}
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_URL=${REDIS_URL}
       - RUN_MIGRATIONS=true
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - GCS_BUCKET_NAME=${GCS_BUCKET_NAME}
@@ -43,8 +28,6 @@ services:
       - DEMO_BOT_ADMIN_UUID=${DEMO_BOT_ADMIN_UUID:-}
       - DEMO_BOT_ADMIN_EMAIL=${DEMO_BOT_ADMIN_EMAIL:-admin@weaver.com}
     depends_on:
-      redis:
-        condition: service_healthy
     volumes:
       - ./backend/app:/app/app
       - gcs_credentials:/app/credentials
@@ -61,9 +44,7 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - WORKER_DATABASE_URL=${WORKER_DATABASE_URL}
-      - REDIS_URL=redis://redis:6379/0
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - REDIS_URL=${REDIS_URL}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - GCS_BUCKET_NAME=${GCS_BUCKET_NAME}
       - GCS_ACCESS_KEY=${GCS_ACCESS_KEY}
@@ -73,8 +54,6 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     depends_on:
-      redis:
-        condition: service_healthy
       api:
         condition: service_started
     volumes:
@@ -104,7 +83,6 @@ services:
     restart: unless-stopped
 
 volumes:
-  redis_data:
   gcs_credentials:
 
 networks:

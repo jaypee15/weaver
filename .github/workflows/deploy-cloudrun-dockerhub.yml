@@ -1,0 +1,169 @@
+name: CI/CD - Build, Push, Deploy (Cloud Run via Docker Hub)
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  API_IMAGE_NAME: weaver-api
+  WORKER_IMAGE_NAME: weaver-worker
+  FRONTEND_IMAGE_NAME: weaver-frontend
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # API image (FastAPI backend)
+      - name: Build and push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/Dockerfile
+          target: api
+          push: true
+          tags: |
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.API_IMAGE_NAME }}:latest
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.API_IMAGE_NAME }}:sha-${{ github.sha }}
+
+      # Worker image (Celery worker)
+      - name: Build and push Worker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/Dockerfile
+          target: worker
+          push: true
+          tags: |
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.WORKER_IMAGE_NAME }}:latest
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.WORKER_IMAGE_NAME }}:sha-${{ github.sha }}
+
+      # Frontend image (Vite + Nginx)
+      - name: Build and push Frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.FRONTEND_IMAGE_NAME }}:sha-${{ github.sha }}
+          build-args: |
+            VITE_API_URL=${{ secrets.FRONTEND_VITE_API_URL }}
+            VITE_SUPABASE_URL=${{ secrets.FRONTEND_VITE_SUPABASE_URL }}
+            VITE_SUPABASE_ANON_KEY=${{ secrets.FRONTEND_VITE_SUPABASE_ANON_KEY }}
+            VITE_SITE_URL=${{ secrets.FRONTEND_VITE_SITE_URL }}
+
+  deploy-api:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: latest
+
+      - name: Configure project
+        run: gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Deploy API to Cloud Run
+        run: |
+          gcloud run deploy ${{ secrets.CLOUD_RUN_API_SERVICE }} \
+            --image docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.API_IMAGE_NAME }}:sha-${{ github.sha }} \
+            --region ${{ secrets.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 8000 \
+            --cpu 1 \
+            --memory 1Gi \
+            --min-instances 1 \
+            --max-instances 10
+
+  deploy-worker:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: latest
+
+      - name: Configure project
+        run: gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Deploy Worker to Cloud Run
+        run: |
+          gcloud run deploy ${{ secrets.CLOUD_RUN_WORKER_SERVICE }} \
+            --image docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.WORKER_IMAGE_NAME }}:sha-${{ github.sha }} \
+            --region ${{ secrets.GCP_REGION }} \
+            --platform managed \
+            --no-allow-unauthenticated \
+            --port 8080 \
+            --cpu 1 \
+            --memory 1Gi \
+            --min-instances 1 \
+            --max-instances 1 \
+            --no-cpu-throttling
+
+  deploy-frontend:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: latest
+
+      - name: Configure project
+        run: gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Deploy Frontend to Cloud Run
+        run: |
+          gcloud run deploy ${{ secrets.CLOUD_RUN_FRONTEND_SERVICE }} \
+            --image docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.FRONTEND_IMAGE_NAME }}:sha-${{ github.sha }} \
+            --region ${{ secrets.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 3000 \
+            --cpu 1 \
+            --memory 512Mi \
+            --min-instances 0 \
+            --max-instances 5
