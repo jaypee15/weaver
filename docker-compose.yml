@@ -27,7 +27,6 @@ services:
       - DEMO_BOT_ENABLED=${DEMO_BOT_ENABLED:-true}
       - DEMO_BOT_ADMIN_UUID=${DEMO_BOT_ADMIN_UUID:-}
       - DEMO_BOT_ADMIN_EMAIL=${DEMO_BOT_ADMIN_EMAIL:-admin@weaver.com}
-    depends_on:
     volumes:
       - ./backend/app:/app/app
       - gcs_credentials:/app/credentials
