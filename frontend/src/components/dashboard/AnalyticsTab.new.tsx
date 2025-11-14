@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts'
 import { BarChart3, TrendingUp, Clock, AlertCircle } from 'lucide-react'
+import type { DailyStat, TopQuery, UnansweredQuery } from '@/types'
 
 interface AnalyticsTabProps {
   tenantId: string
@@ -37,14 +38,23 @@ export default function AnalyticsTab({ tenantId }: AnalyticsTabProps) {
     )
   }
 
-  const totalQueries = stats?.daily_stats?.reduce((sum, day) => sum + day.total_queries, 0) || 0
+  const totalQueries =
+    stats?.daily_stats?.reduce((sum: number, day: DailyStat) => sum + day.total_queries, 0) || 0
+
   const avgLatency = stats?.daily_stats?.length
     ? Math.round(
-        stats.daily_stats.reduce((sum, day) => sum + day.avg_latency_ms, 0) / stats.daily_stats.length
+        stats.daily_stats.reduce(
+          (sum: number, day: DailyStat) => sum + day.avg_latency_ms,
+          0
+        ) / stats.daily_stats.length
       )
     : 0
+
   const lowConfidenceCount =
-    stats?.daily_stats?.reduce((sum, day) => sum + day.low_confidence_count, 0) || 0
+    stats?.daily_stats?.reduce(
+      (sum: number, day: DailyStat) => sum + day.low_confidence_count,
+      0
+    ) || 0
 
   return (
     <div className="space-y-6">
@@ -153,7 +163,7 @@ export default function AnalyticsTab({ tenantId }: AnalyticsTabProps) {
           </div>
         ) : topQueries && topQueries.length > 0 ? (
           <div className="space-y-2">
-            {topQueries.map((item, index) => (
+            {topQueries.map((item: TopQuery, index: number) => (
               <div
                 key={index}
                 className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
@@ -187,7 +197,7 @@ export default function AnalyticsTab({ tenantId }: AnalyticsTabProps) {
           </div>
         ) : unanswered && unanswered.length > 0 ? (
           <div className="space-y-2">
-            {unanswered.map((item, index) => (
+            {unanswered.map((item: UnansweredQuery, index: number) => (
               <div
                 key={index}
                 className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200"

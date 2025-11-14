@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { User as SupabaseUser, Session } from '@supabase/supabase-js'
+import { User as SupabaseUser, Session, AuthChangeEvent } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { apiClient } from '@/lib/axios'
 import { User } from '@/types'
@@ -86,7 +86,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     // Listen for auth changes
-    supabase.auth.onAuthStateChange(async (_event, session) => {
+    supabase.auth.onAuthStateChange(async (_event: AuthChangeEvent, session: Session | null) => {
       set({ session, supabaseUser: session?.user || null })
       
       if (session) {

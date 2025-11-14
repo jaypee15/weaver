@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Copy, Check, Trash2, Play, Square } from 'lucide-react'
 import { API_URL } from '@/lib/axios'
 import { toast } from 'sonner'
+import type { APIKey } from '@/types'
 
 const DEMO_BOT_ID = '00000000-0000-0000-0000-000000000000'
 
@@ -474,7 +475,7 @@ for line in response.iter_lines():
           </div>
         ) : (
           <div className="space-y-3">
-            {keys.map((key) => (
+            {keys.map((key: APIKey) => (
               <div
                 key={key.id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"

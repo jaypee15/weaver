@@ -6,6 +6,7 @@ import { formatFileSize, formatDate } from '@/lib/utils'
 import { Loader2, CheckCircle, XCircle, Clock, Upload, FileText } from 'lucide-react'
 import { useDropzone } from 'react-dropzone'
 import { toast } from 'sonner'
+import type { Document as DocumentType } from '@/types'
 
 interface UploadTabProps {
   tenantId: string
@@ -191,7 +192,7 @@ export default function UploadTab({ tenantId }: UploadTabProps) {
           </div>
         ) : (
           <div className="space-y-3">
-            {documents.map((doc) => (
+            {documents.map((doc: DocumentType) => (
               <div
                 key={doc.id}
                 className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"

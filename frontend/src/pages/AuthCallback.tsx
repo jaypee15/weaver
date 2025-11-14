@@ -44,7 +44,7 @@ export default function AuthCallback() {
                   Authorization: `Bearer ${session.access_token}`,
                 },
               }
-            ).catch(error => {
+            ).catch((error: unknown) => {
               console.error('Error completing signup:', error)
               // Dashboard will handle this fallback
             })
@@ -81,7 +81,7 @@ export default function AuthCallback() {
 
         // Redirect to dashboard immediately (replace history to avoid back button issues)
         navigate('/dashboard', { replace: true })
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error in auth callback:', error)
         navigate('/', { replace: true })
       }

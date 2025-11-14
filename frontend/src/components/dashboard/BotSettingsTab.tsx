@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Loader2, Sparkles, Info, CheckCircle2, Eye } from 'lucide-react'
+import { Loader2, Sparkles, Info, CheckCircle2 } from 'lucide-react'
 import { useBotConfig, useGenerateSystemPrompt, useUpdateBotConfig } from '@/hooks/useBot'
 import { toast } from 'sonner'
 
