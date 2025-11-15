@@ -32,8 +32,11 @@ FROM base as worker
 COPY backend/app /app/app
 COPY worker /app/worker
 COPY worker/entrypoint.sh /app/entrypoint.sh
+COPY worker/health_server.py /app/health_server.py
 
 RUN chmod +x /app/entrypoint.sh
+
+EXPOSE 8080
 
 ENTRYPOINT ["/app/entrypoint.sh"]
 
