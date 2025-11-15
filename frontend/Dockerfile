@@ -12,6 +12,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Debug: List copied files
+RUN ls -la src/lib/ || echo "src/lib does not exist"
+
 # Build args for environment variables
 ARG VITE_API_URL
 ARG VITE_SUPABASE_URL
