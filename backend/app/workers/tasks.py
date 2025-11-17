@@ -13,12 +13,7 @@ from app.config import settings
 from app.services.embeddings import EmbeddingService
 from app.services.storage import StorageService
 from app.db.repositories import DocumentRepository, ChunkRepository
-
-# Monkey-patch the repositories to use worker connection
-# This ensures workers use Transaction Mode (port 6543) with statement_cache_size=0
 from app.workers.db import WorkerAsyncSessionLocal
-from app.db import connection
-connection.AsyncSessionLocal = WorkerAsyncSessionLocal
 
 
 def _ensure_rediss_ssl_params(url: str) -> str:
@@ -58,6 +53,17 @@ celery_app.conf.update(
     task_acks_late=True,
     worker_prefetch_multiplier=1,
     broker_connection_retry_on_startup=True,
+    broker_connection_retry=True,
+    broker_connection_max_retries=10,
+    broker_pool_limit=None,
+    broker_heartbeat=None,
+    broker_connection_timeout=30,
+    redis_socket_keepalive=True,
+    redis_socket_keepalive_options={
+        1: 30,  # TCP_KEEPIDLE
+        2: 10,  # TCP_KEEPINTVL  
+        3: 3,   # TCP_KEEPCNT
+    },
 )
 
 
@@ -113,25 +119,10 @@ def chunk_text(text: str, chunk_size: int = 800, overlap_pct: int = 20) -> List[
     return chunks
 
 
-@celery_app.task(bind=True, max_retries=3)
-def process_document(self, doc_id: str, tenant_id: str, gcs_path: str):
-    """Process document - wrapper that calls async function"""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        loop.run_until_complete(_process_document_async(doc_id, tenant_id, gcs_path))
-    except Exception as e:
-        doc_repo = DocumentRepository()
-        loop.run_until_complete(doc_repo.update_status(UUID(doc_id), "failed", str(e)))
-        raise self.retry(exc=e, countdown=60 * (2 ** self.request.retries))
-    finally:
-        loop.close()
-
-
 async def _process_document_async(doc_id: str, tenant_id: str, gcs_path: str):
     """Async function that does the actual document processing"""
-    doc_repo = DocumentRepository()
-    chunk_repo = ChunkRepository()
+    doc_repo = DocumentRepository(session_factory=WorkerAsyncSessionLocal)
+    chunk_repo = ChunkRepository(session_factory=WorkerAsyncSessionLocal)
     embedding_service = EmbeddingService()
     
     # Download file from GCS
@@ -189,4 +180,28 @@ async def _process_document_async(doc_id: str, tenant_id: str, gcs_path: str):
     
     await chunk_repo.insert_chunks(chunk_records)
     await doc_repo.update_status(UUID(doc_id), "completed")
+
+
+async def _process_and_mark(doc_id: str, tenant_id: str, gcs_path: str) -> None:
+    """Async wrapper that does the full document processing."""
+    await _process_document_async(doc_id, tenant_id, gcs_path)
+
+
+async def _mark_failed(doc_id: str, error_message: str) -> None:
+    """Async helper to mark a document as failed."""
+    doc_repo = DocumentRepository(session_factory=WorkerAsyncSessionLocal)
+    await doc_repo.update_status(UUID(doc_id), "failed", error_message)
+
+
+@celery_app.task(bind=True, max_retries=3)
+def process_document(self, doc_id: str, tenant_id: str, gcs_path: str):
+    """Celery entrypoint – runs async processing via asyncio.run."""
+    try:
+        asyncio.run(_process_and_mark(doc_id, tenant_id, gcs_path))
+    except Exception as e:
+        # Try to record failure in the DB; if that also fails, we still retry.
+        try:
+            asyncio.run(_mark_failed(doc_id, str(e)))
+        finally:
+            raise self.retry(exc=e, countdown=60 * (2 ** self.request.retries))
 

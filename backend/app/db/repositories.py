@@ -1,11 +1,12 @@
-from typing import Optional, List
+from typing import Optional, List, Callable
 from uuid import UUID
 from datetime import datetime
 from sqlalchemy import select, update, delete, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.db.connection import AsyncSessionLocal
+from app.db import connection
+AsyncSessionLocal = connection.AsyncSessionLocal
 from app.db.models import Tenant, Profile, Bot, Document, DocumentChunk, APIKey, BotQuery
 from app.auth.utils import generate_api_key, hash_api_key, verify_key_hash
 from app.auth.types import APIKeyData
@@ -189,6 +190,9 @@ class APIKeyRepository:
 
 
 class DocumentRepository:
+    def __init__(self, session_factory: Callable[[], AsyncSession] = AsyncSessionLocal):
+        self._session_factory = session_factory
+
     async def create_document(
         self,
         tenant_id: UUID,
@@ -196,7 +200,7 @@ class DocumentRepository:
         gcs_path: str,
         size_bytes: int,
     ) -> UUID:
-        async with AsyncSessionLocal() as session:
+        async with self._session_factory() as session:
             doc = Document(
                 tenant_id=tenant_id,
                 filename=filename,
@@ -210,7 +214,7 @@ class DocumentRepository:
             return doc.id
     
     async def update_status(self, doc_id: UUID, status: str, error_message: Optional[str] = None):
-        async with AsyncSessionLocal() as session:
+        async with self._session_factory() as session:
             await session.execute(
                 update(Document)
                 .where(Document.id == doc_id)
@@ -220,7 +224,7 @@ class DocumentRepository:
     
     async def list_by_tenant(self, tenant_id: UUID) -> List[dict]:
         """List all documents for a tenant"""
-        async with AsyncSessionLocal() as session:
+        async with self._session_factory() as session:
             result = await session.execute(
                 select(Document)
                 .where(Document.tenant_id == tenant_id)
@@ -243,8 +247,11 @@ class DocumentRepository:
 
 
 class ChunkRepository:
+    def __init__(self, session_factory: Callable[[], AsyncSession] = AsyncSessionLocal):
+        self._session_factory = session_factory
+
     async def insert_chunks(self, chunks: List[dict]):
-        async with AsyncSessionLocal() as session:
+        async with self._session_factory() as session:
             chunk_objects = [
                 DocumentChunk(
                     doc_id=chunk["doc_id"],
@@ -266,7 +273,7 @@ class ChunkRepository:
         query_embedding: List[float],
         top_k: int = 8,
     ) -> List[dict]:
-        async with AsyncSessionLocal() as session:
+        async with self._session_factory() as session:
             # Using raw SQL for vector similarity search as SQLAlchemy doesn't have full pgvector support yet
             from sqlalchemy import text
             

@@ -20,6 +20,10 @@ HEALTH_PID=$!
 trap "echo '🛑 Shutting down...'; kill $HEALTH_PID 2>/dev/null; exit 0" SIGTERM SIGINT
 
 echo "🔨 Starting Celery worker..."
-exec celery -A worker.celery.celery_app worker --loglevel=info --concurrency=4 --uid=nobody --gid=nogroup
+exec celery -A app.workers.tasks worker \
+  --loglevel=info \
+  --concurrency=4 \
+  --uid=nobody --gid=nogroup \
+  --without-gossip --without-mingle --without-heartbeat
 
 

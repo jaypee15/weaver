@@ -40,8 +40,13 @@ class IngestionService:
             gcs_path=gcs_path,
             size_bytes=file_size,
         )
-        
-        process_document.delay(str(doc_id), str(tenant_id), gcs_path)
+
+        try:
+            process_document.delay(str(doc_id), str(tenant_id), gcs_path)
+        except Exception as e:
+            # If enqueueing to Celery fails, mark document as failed instead of leaving it pending
+            await self.doc_repo.update_status(doc_id, "failed", f"Enqueue error: {e}")
+            raise
         
         return {
             "doc_id": doc_id,
