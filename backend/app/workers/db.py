@@ -10,6 +10,7 @@ with asyncio.run() creating fresh event loops per task.
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
+
 from app.config import settings
 
 
@@ -20,6 +21,7 @@ def _assert_worker_uses_transaction_mode() -> None:
 
 
 _assert_worker_uses_transaction_mode()
+worker_db_url = settings.worker_db_url
 
 
 # Worker engine configured for Transaction Mode (pgbouncer)
@@ -28,16 +30,19 @@ _assert_worker_uses_transaction_mode()
 # - Uses NullPool to prevent connection reuse across different event loops
 #   (each asyncio.run() creates a new loop, so pooled connections become invalid)
 worker_engine = create_async_engine(
-    settings.worker_db_url,
+    worker_db_url,
     echo=False,
     poolclass=NullPool,  # No connection pooling - create fresh connections per task
+    execution_options={
+        "compiled_cache": None,  # Disable SQLAlchemy's compiled statement cache
+    },
     connect_args={
         "server_settings": {
             "jit": "off",
         },
         "statement_cache_size": 0,
         "prepared_statement_cache_size": 0,
-        "prepared_statement_name_func": lambda: None,  # Disable prepared statement naming
+        "prepared_statement_name_func": lambda: None,
     },
 )
 

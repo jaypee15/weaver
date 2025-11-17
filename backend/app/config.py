@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     
     @property
     def worker_db_url(self) -> str:
-        """Get worker database URL, fallback to main DATABASE_URL if not set"""
+        """Get worker database URL, fallback to main DATABASE_URL if not set."""
         return self.WORKER_DATABASE_URL or self.DATABASE_URL
 
 
