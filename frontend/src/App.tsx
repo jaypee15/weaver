@@ -1,11 +1,12 @@
 import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/authStore'
 import { Toaster } from '@/components/ui/sonner'
 import Login from '@/pages/Login'
 import AuthCallback from '@/pages/AuthCallback'
 import Dashboard from '@/pages/Dashboard'
+import { pageview } from '@/lib/gtag'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,10 +37,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   const initialize = useAuthStore((state) => state.initialize)
+  const location = useLocation()
 
   useEffect(() => {
     initialize()
   }, [initialize])
+
+  useEffect(() => {
+    pageview(location.pathname)
+  }, [location])
 
   return (
     <Routes>
