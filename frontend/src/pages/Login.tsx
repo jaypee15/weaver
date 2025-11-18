@@ -132,7 +132,7 @@ export default function Login() {
                 )}
               </Button>
               <div className="text-sm text-slate-500">
-                {session ? 'Welcome back! 👋' : 'Free to start • No credit card required'}
+                {session ? 'Welcome back!' : 'Free to start • No credit card required'}
               </div>
             </div>
 
@@ -194,7 +194,7 @@ export default function Login() {
         {/* How It Works */}
         <section className="max-w-7xl mx-auto px-6 py-32">
           <h2 className="text-5xl font-bold text-center mb-20">
-            ⚙️ How It <span className="text-blue-500">Works</span>
+            How It <span className="text-blue-500">Works</span>
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
             {[
@@ -216,7 +216,7 @@ export default function Login() {
                 step: '03', 
                 icon: '🚀', 
                 title: 'Deploy anywhere', 
-                desc: 'Get your own API endpoint you can embed in your site, app, or internal tools.',
+                desc: 'Get an API endpoint you can embed in your site, app, or internal tools.',
                 color: 'pink'
               },
             ].map((item) => (
@@ -236,7 +236,7 @@ export default function Login() {
         {/* Why Choose Weaver */}
         <section className="max-w-7xl mx-auto px-6 py-32 border-t border-slate-800">
           <h2 className="text-5xl font-bold text-center mb-20">
-            🚀 Why Teams Choose <span className="text-blue-400">Weaver</span>
+            Why Teams Choose <span className="text-blue-400">Weaver</span>
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
             {[
@@ -262,7 +262,7 @@ export default function Login() {
         {/* Tech Stack */}
         <section className="max-w-7xl mx-auto px-6 py-32">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">🏗️ Under the Hood</h2>
+            <h2 className="text-4xl font-bold mb-4">Under the Hood</h2>
             <p className="text-slate-400 text-lg">Enterprise-grade tech — without the enterprise complexity.</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -289,7 +289,7 @@ export default function Login() {
 
         {/* Use Cases */}
         <section className="max-w-7xl mx-auto px-6 py-32 border-t border-slate-800">
-          <h2 className="text-4xl font-bold text-center mb-16">🧰 Use Weaver For</h2>
+          <h2 className="text-4xl font-bold text-center mb-16">Use Weaver For</h2>
           <div className="grid md:grid-cols-3 gap-6">
             {[
               'Customer support automation',
