@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Header
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Header, Query
 from fastapi.responses import StreamingResponse
 from typing import Optional
 from uuid import UUID
@@ -188,6 +188,9 @@ async def upload_document(
 @router.get("/tenants/{tenant_id}/docs", response_model=DocumentListResponse)
 async def list_documents(
     tenant_id: UUID,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    status: Optional[str] = Query(None, description="Filter by document status"),
     user: User = Depends(get_current_user),
 ):
     """List all documents for a tenant"""
@@ -195,9 +198,20 @@ async def list_documents(
         raise HTTPException(status_code=403, detail="Tenant ID mismatch")
     
     doc_repo = DocumentRepository()
-    documents = await doc_repo.list_by_tenant(tenant_id)
-    
-    return {"documents": documents}
+    repo_data = await doc_repo.list_by_tenant(
+        tenant_id,
+        limit=limit,
+        offset=offset,
+        status=status,
+    )
+
+    return DocumentListResponse(
+        documents=repo_data['documents'],
+        total=repo_data['total'],
+        limit=repo_data['limit'],
+        offset=repo_data['offset'],
+        status_filter=repo_data['status_filter']
+    )
 
 
 @router.get("/tenants/{tenant_id}/bot", response_model=BotConfigResponse)

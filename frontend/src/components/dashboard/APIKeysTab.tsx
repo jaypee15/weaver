@@ -36,11 +36,11 @@ export default function APIKeysTab({ tenantId }: APIKeysTabProps) {
   const abortControllerRef = useRef<AbortController | null>(null)
 
   const { data: keys = [], isLoading } = useAPIKeys(tenantId)
-  const { data: documents = [] } = useDocuments(tenantId)
+  const { data: documentsResponse } = useDocuments(tenantId, { limit: 5 })
   const createMutation = useCreateAPIKey(tenantId)
   const revokeMutation = useRevokeAPIKey(tenantId)
   
-  const hasDocs = documents && documents.length > 0
+  const hasDocs = (documentsResponse?.total ?? 0) > 0
   const activeTenantId = selectedBot === 'demo' ? DEMO_BOT_ID : tenantId
 
   // Load test panel state from localStorage

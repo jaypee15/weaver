@@ -32,10 +32,11 @@ class CacheService:
             self._redis_client = Redis.from_url(
                 settings.REDIS_URL,
                 decode_responses=False,  # Handle encoding/decoding manually for flexibility
-                max_connections=50,  # Connection pool size
+                max_connections=100,  # Increased pool size for concurrent workloads
                 socket_connect_timeout=5,
                 socket_timeout=5,
                 retry_on_timeout=True,
+                health_check_interval=30,
             )
             # Test connection
             self._redis_client.ping()

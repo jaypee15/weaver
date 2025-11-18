@@ -222,28 +222,56 @@ class DocumentRepository:
             )
             await session.commit()
     
-    async def list_by_tenant(self, tenant_id: UUID) -> List[dict]:
-        """List all documents for a tenant"""
+    async def list_by_tenant(
+        self,
+        tenant_id: UUID,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+        status: Optional[str] = None,
+    ) -> dict:
+        """List documents for a tenant with pagination."""
+        # Clamp pagination values
+        limit = max(1, min(limit, 200))
+        offset = max(0, offset)
+        
         async with self._session_factory() as session:
+            base_query = select(Document).where(Document.tenant_id == tenant_id)
+            count_query = select(func.count()).select_from(Document).where(Document.tenant_id == tenant_id)
+            
+            if status:
+                base_query = base_query.where(Document.status == status)
+                count_query = count_query.where(Document.status == status)
+            
             result = await session.execute(
-                select(Document)
-                .where(Document.tenant_id == tenant_id)
+                base_query
                 .order_by(desc(Document.created_at))
+                .limit(limit)
+                .offset(offset)
             )
             documents = result.scalars().all()
             
-            return [
-                {
-                    "id": str(doc.id),
-                    "filename": doc.filename,
-                    "size_bytes": doc.size_bytes,
-                    "status": doc.status,
-                    "error_message": doc.error_message,
-                    "created_at": doc.created_at.isoformat(),
-                    "updated_at": doc.updated_at.isoformat(),
-                }
-                for doc in documents
-            ]
+            total_result = await session.execute(count_query)
+            total = total_result.scalar_one()
+            
+            return {
+                "documents": [
+                    {
+                        "id": str(doc.id),
+                        "filename": doc.filename,
+                        "size_bytes": doc.size_bytes,
+                        "status": doc.status,
+                        "error_message": doc.error_message,
+                        "created_at": doc.created_at.isoformat(),
+                        "updated_at": doc.updated_at.isoformat(),
+                    }
+                    for doc in documents
+                ],
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+                "status_filter": status,
+            }
 
 
 class ChunkRepository:

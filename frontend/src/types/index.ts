@@ -15,6 +15,14 @@ export interface Document {
   updated_at: string
 }
 
+export interface DocumentListResponse {
+  documents: Document[]
+  total: number
+  limit: number
+  offset: number
+  status_filter?: string | null
+}
+
 export interface APIKey {
   id: string
   name: string

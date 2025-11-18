@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 class QueryService:
+    SLOW_RETRIEVAL_THRESHOLD_MS = 1000
+    SLOW_LLM_THRESHOLD_MS = 3000
+    SLOW_TOTAL_THRESHOLD_MS = 4000
     def __init__(self):
         self.retrieval_service = RetrievalService()
         self.llm_service = LLMService()
@@ -58,6 +61,16 @@ class QueryService:
             query=query,
         )
         timings['retrieval_ms'] = int((time.time() - t1) * 1000)
+        if timings['retrieval_ms'] > self.SLOW_RETRIEVAL_THRESHOLD_MS:
+            logger.warning(
+                "Slow retrieval detected",
+                extra={
+                    "tenant_id": str(tenant_id),
+                    "retrieval_ms": timings['retrieval_ms'],
+                    "query_length": len(query),
+                    "chunks_returned": len(context_chunks),
+                },
+            )
         
         if not context_chunks:
             answer = "I don't know based on the available information."
@@ -69,6 +82,15 @@ class QueryService:
             t2 = time.time()
             answer = await self.llm_service.generate_answer(query, context_chunks, bot_config)
             timings['llm_ms'] = int((time.time() - t2) * 1000)
+            if timings['llm_ms'] > self.SLOW_LLM_THRESHOLD_MS:
+                logger.warning(
+                    "Slow LLM generation detected",
+                    extra={
+                        "tenant_id": str(tenant_id),
+                        "llm_ms": timings['llm_ms'],
+                        "context_chunks": len(context_chunks),
+                    },
+                )
             
             avg_similarity = sum(c["similarity"] for c in context_chunks) / len(context_chunks)
             if avg_similarity > 0.8:
@@ -91,6 +113,16 @@ class QueryService:
         timings['total_ms'] = latency_ms
         
         logger.info(f"Query performance - tenant:{tenant_id} | timings:{timings} | chunks:{len(context_chunks)}")
+        if latency_ms > self.SLOW_TOTAL_THRESHOLD_MS:
+            logger.warning(
+                "Slow query detected",
+                extra={
+                    "tenant_id": str(tenant_id),
+                    "latency_ms": latency_ms,
+                    "retrieval_ms": timings.get("retrieval_ms", 0),
+                    "llm_ms": timings.get("llm_ms", 0),
+                },
+            )
         
         await self.query_log_repo.log_query(
             tenant_id=tenant_id,

@@ -90,6 +90,10 @@ class DocumentMetadata(BaseModel):
 
 class DocumentListResponse(BaseModel):
     documents: List[DocumentMetadata]
+    total: int
+    limit: int
+    offset: int
+    status_filter: Optional[str] = None
 
 
 class BotConfigResponse(BaseModel):

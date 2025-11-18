@@ -1,12 +1,17 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useDocuments, useUploadDocument } from '@/hooks/useDocuments'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatFileSize, formatDate } from '@/lib/utils'
-import { Loader2, CheckCircle, XCircle, Clock, Upload, FileText } from 'lucide-react'
+import { Loader2, CheckCircle, XCircle, Clock, Upload, FileText, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useDropzone } from 'react-dropzone'
 import { toast } from 'sonner'
 import type { Document as DocumentType } from '@/types'
+import { useDebounce } from '@/hooks/useDebounce'
+
+type StatusFilter = 'all' | 'pending' | 'processing' | 'completed' | 'failed'
 
 interface UploadTabProps {
   tenantId: string
@@ -14,11 +19,40 @@ interface UploadTabProps {
 
 export default function UploadTab({ tenantId }: UploadTabProps) {
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [page, setPage] = useState(0)
+  const limit = 20
 
-  const { data: documents = [], isLoading } = useDocuments(tenantId)
+  const debouncedSearch = useDebounce(searchTerm, 300)
+
+  const { data: documentsResponse, isLoading, isFetching } = useDocuments(tenantId, {
+    limit,
+    offset: page * limit,
+    status: statusFilter === 'all' ? null : statusFilter,
+  })
   const uploadMutation = useUploadDocument(tenantId)
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+  const totalDocuments = documentsResponse?.total ?? 0
+  const documents = documentsResponse?.documents ?? []
+  const totalPages = Math.max(1, Math.ceil(totalDocuments / limit))
+
+  useEffect(() => {
+    setPage(0)
+  }, [statusFilter, debouncedSearch])
+
+  const filteredDocuments = useMemo(() => {
+    if (!debouncedSearch) return documents
+    const lower = debouncedSearch.toLowerCase()
+    return documents.filter((doc) => doc.filename.toLowerCase().includes(lower))
+  }, [documents, debouncedSearch])
+
+  const onDrop = useCallback(async (acceptedFiles: File[], fileRejections) => {
+    if (fileRejections.length > 0) {
+      toast.error('You can only upload a maximum of 2 files at once.')
+      return
+    }
+
     for (const file of acceptedFiles) {
       const fileId = `${file.name}-${Date.now()}`
       setUploadProgress(prev => ({ ...prev, [fileId]: 0 }))
@@ -72,6 +106,7 @@ export default function UploadTab({ tenantId }: UploadTabProps) {
     },
     maxSize: 200 * 1024 * 1024, // 200MB
     multiple: true,
+    maxFiles: 2, // Add this line
   })
 
   const getStatusBadge = (status: string) => {
@@ -176,9 +211,20 @@ export default function UploadTab({ tenantId }: UploadTabProps) {
 
       {/* Documents List */}
       <div>
-        <h3 className="text-xl font-semibold mb-4">Your Documents</h3>
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Your Documents</h3>
+            <p className="text-sm text-gray-500">Track processing status and manage uploads</p>
+          </div>
+          {totalDocuments > 0 && (
+            <div className="text-sm text-gray-600">
+              Showing {(page * limit) + 1}-
+              {Math.min((page + 1) * limit, totalDocuments)} of {totalDocuments} documents
+            </div>
+          )}
+        </div>
 
-        {documents.length === 0 ? (
+        {totalDocuments === 0 ? (
           <div className="text-center py-16 border-2 border-dashed rounded-lg">
             <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
             <p className="text-gray-600 mb-4 text-lg">No documents uploaded yet</p>
@@ -191,8 +237,48 @@ export default function UploadTab({ tenantId }: UploadTabProps) {
             </Button>
           </div>
         ) : (
-          <div className="space-y-3">
-            {documents.map((doc: DocumentType) => (
+          <>
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="text-sm font-medium text-gray-700">Search</label>
+                <Input
+                  placeholder="Search by filename..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Status</label>
+                <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="All statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="processing">Processing</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {isFetching && (
+              <div className="flex items-center gap-2 text-sm text-gray-500 mt-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Refreshing status...
+              </div>
+            )}
+
+            {filteredDocuments.length === 0 ? (
+              <div className="text-center py-12 border rounded-lg mt-4">
+                <p className="text-gray-600">No documents match the current filters.</p>
+              </div>
+            ) : (
+              <div className="space-y-3 mt-4">
+                {filteredDocuments.map((doc: DocumentType) => (
               <div
                 key={doc.id}
                 className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
@@ -235,8 +321,34 @@ export default function UploadTab({ tenantId }: UploadTabProps) {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+                ))}
+              </div>
+            )}
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
+                  disabled={page === 0}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-2" />
+                  Previous
+                </Button>
+                <span className="text-sm text-gray-600">
+                  Page {page + 1} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  onClick={() => setPage((prev) => Math.min(prev + 1, totalPages - 1))}
+                  disabled={page >= totalPages - 1}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
