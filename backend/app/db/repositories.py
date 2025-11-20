@@ -476,6 +476,7 @@ class QueryLogRepository:
         confidence: str,
         latency_ms: int,
         sources: List[dict],
+        query_embedding: List[float] = None,
     ):
         async with AsyncSessionLocal() as session:
             # Ensure payload is JSON-serializable
@@ -498,9 +499,59 @@ class QueryLogRepository:
                 confidence=confidence,
                 latency_ms=latency_ms,
                 sources=safe_sources,
+                query_embedding=query_embedding,
             )
             session.add(bot_query)
             await session.commit()
+
+    async def find_similar_query(
+        self,
+        tenant_id: UUID,
+        query_embedding: List[float],
+        threshold: float = 0.95
+    ) -> Optional[dict]:
+        """
+        Find a historically high-confidence query that matches semantically.
+        """
+        async with AsyncSessionLocal() as session:
+            from sqlalchemy import text
+            
+            # Format embedding for SQL
+            embedding_str = '[' + ','.join(str(x) for x in query_embedding) + ']'
+            
+            # Search for most similar query in this tenant's history
+            # That was answered with 'high' confidence
+            sql = text("""
+                SELECT 
+                    answer, 
+                    sources, 
+                    1 - (query_embedding <=> (:embedding)::vector) as similarity
+                FROM bot_queries
+                WHERE tenant_id = :tenant_id
+                  AND confidence = 'high'
+                  AND 1 - (query_embedding <=> (:embedding)::vector) > :threshold
+                ORDER BY query_embedding <=> (:embedding)::vector
+                LIMIT 1
+            """)
+            
+            result = await session.execute(
+                sql,
+                {
+                    "tenant_id": str(tenant_id),
+                    "embedding": embedding_str,
+                    "threshold": threshold
+                }
+            )
+            row = result.fetchone()
+            
+            if row:
+                return {
+                    "answer": row[0],
+                    "sources": row[1],
+                    "similarity": float(row[2])
+                }
+            return None
+
 
 
 class AnalyticsRepository:

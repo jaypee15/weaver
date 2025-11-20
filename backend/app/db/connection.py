@@ -6,19 +6,19 @@ from app.config import settings
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.ENVIRONMENT == "development",
-    pool_size=20, 
-    max_overflow=40, 
+    pool_size=5, 
+    max_overflow=5, 
     pool_pre_ping=True,
-    pool_recycle=3600,
+    pool_recycle=1800,
     pool_timeout=30,  # Timeout waiting for connection from pool
     echo_pool=False,  # Disable pool logging unless debugging
     connect_args={
         "statement_cache_size": 0,
         "server_settings": {
             "jit": "off",  # Disable JIT for faster simple queries
-            "statement_timeout": "30000",  # 30s query timeout
+            "statement_timeout": "10000",  # 10s query timeout
         },
-        "command_timeout": 30,  # Connection command timeout
+        "command_timeout": 10,  # Connection command timeout
     }
 )
 

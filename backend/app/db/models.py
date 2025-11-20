@@ -150,6 +150,7 @@ class BotQuery(Base):
     confidence = Column(String(50))
     latency_ms = Column(Integer)
     sources = Column(JSONB, default=[])
+    query_embedding = Column(Vector(1536))
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     
     tenant = relationship("Tenant", back_populates="bot_queries")
@@ -160,5 +161,11 @@ class BotQuery(Base):
         Index('idx_bot_queries_api_key_id', 'api_key_id'),
         Index('idx_bot_queries_created_at', 'created_at'),
         Index('idx_bot_queries_confidence', 'confidence'),
+
+        # Use partial index to only index queries for high confidence answers
+        Index('idx_bot_queries_semantic_cache', 'query_embedding', postgresql_using='hnsw',
+        postgresql_with={'m': 16, 'ef_construction': 64},
+        postgresql_ops={'query_embedding': 'vector_cosine_ops'},
+        postgresql_where=text("confidence='high'")),
     )
 
