@@ -42,6 +42,8 @@ router = APIRouter()
 router.include_router(analytics.router, tags=["analytics"])
 
 
+from sqlalchemy.exc import IntegrityError
+
 @router.post("/auth/complete-signup", response_model=SignupResponse)
 async def complete_signup(auth_data: dict = Depends(verify_supabase_token)):
     """
@@ -49,48 +51,35 @@ async def complete_signup(auth_data: dict = Depends(verify_supabase_token)):
     Called by frontend after successful Supabase OAuth
     """
     profile_repo = ProfileRepository()
-    tenant_repo = TenantRepository()
     
-    user_id = auth_data["id"]
+    user_id = UUID(auth_data["id"])
     email = auth_data["email"]
     
-    # Check if user profile already exists
-    existing_profile = await profile_repo.get_by_id(user_id)
-    
-    if existing_profile:
-        # User already exists, return existing data
+    try:
+        new_user_data = await profile_repo.create_profile_and_tenant(user_id, email)
+        
         return SignupResponse(
-            tenant_id=existing_profile["tenant_id"],
-            user_id=existing_profile["id"],
-            email=existing_profile["email"],
-            role=existing_profile["role"],
-            is_new_user=False,
-            message="Welcome back!"
+            tenant_id=new_user_data["tenant_id"],
+            user_id=new_user_data["user_id"],
+            email=new_user_data["email"],
+            role=new_user_data["role"],
+            is_new_user=True,
+            message="Account created successfully!"
         )
-    
-    # New user - create tenant, user profile, and bot
-    # Extract tenant name from email (before @)
-    tenant_name = email.split('@')[0].capitalize()
-    
-    # Create tenant (this will auto-create bot via trigger)
-    tenant_id = await tenant_repo.create(name=f"{tenant_name}'s Workspace")
-    
-    # Create user profile in our database
-    await profile_repo.create(
-        user_id=user_id,
-        tenant_id=tenant_id,
-        email=email,
-        role="owner"
-    )
-    
-    return SignupResponse(
-        tenant_id=tenant_id,
-        user_id=user_id,
-        email=email,
-        role="owner",
-        is_new_user=True,
-        message="Account created successfully!"
-    )
+    except IntegrityError:
+        # This means the profile already exists. Fetch the existing profile.
+        existing_profile = await profile_repo.get_by_id(user_id)
+        if existing_profile:
+             return SignupResponse(
+                tenant_id=existing_profile["tenant_id"],
+                user_id=existing_profile["id"],
+                email=existing_profile["email"],
+                role=existing_profile["role"],
+                is_new_user=False,
+                message="Welcome back!"
+            )
+        # This case should ideally not happen if the IntegrityError is for the profile's PK.
+        raise HTTPException(status_code=500, detail="An unexpected error occurred during signup.")
 
 
 @router.get("/users/me", response_model=UserMeResponse)

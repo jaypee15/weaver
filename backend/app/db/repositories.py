@@ -102,6 +102,34 @@ class ProfileRepository:
                 "created_at": profile.created_at,
             }
 
+    async def create_profile_and_tenant(self, user_id: UUID, email: str) -> dict:
+        async with AsyncSessionLocal() as session:
+            async with session.begin():
+                # Create tenant
+                tenant_name = email.split('@')[0].capitalize()
+                tenant = Tenant(name=f"{tenant_name}'s Workspace")
+                session.add(tenant)
+                await session.flush()
+
+                # Create profile
+                profile = Profile(
+                    id=user_id,
+                    tenant_id=tenant.id,
+                    email=email,
+                    role="owner"
+                )
+                session.add(profile)
+                await session.commit()
+
+                return {
+                    "tenant_id": tenant.id,
+                    "user_id": profile.id,
+                    "email": profile.email,
+                    "role": profile.role,
+                }
+
+
+
 
 class APIKeyRepository:
     async def create_key(

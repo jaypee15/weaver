@@ -44,25 +44,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         headers: { Authorization: `Bearer ${session.access_token}` },
       })
       set({ user: response.data, loading: false })
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching user profile:', error)
-      
-      // If user not found (404), try to complete signup
-      if (error.response?.status === 404) {
-        try {
-          const signupResponse = await apiClient.post(
-            '/v1/auth/complete-signup',
-            {},
-            { headers: { Authorization: `Bearer ${session.access_token}` } }
-          )
-          set({ user: signupResponse.data, loading: false })
-        } catch (signupError) {
-          console.error('Error completing signup:', signupError)
-          set({ loading: false })
-        }
-      } else {
-        set({ loading: false })
-      }
+      set({ user: null, loading: false }) // Ensure user is null on error
     }
   },
 
