@@ -8,6 +8,7 @@ from celery import Celery
 import fitz
 from docx import Document
 import html2text
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.config import settings
 from app.services.embeddings import EmbeddingService
@@ -103,21 +104,20 @@ def extract_text_from_html(content: bytes) -> List[dict]:
     return [{"text": text, "page_num": None}]
 
 
-def chunk_text(text: str, chunk_size: int = 800, overlap_pct: int = 20) -> List[str]:
-    words = text.split()
-    overlap_size = int(chunk_size * overlap_pct / 100)
-    
-    chunks = []
-    start = 0
-    
-    while start < len(words):
-        end = start + chunk_size
-        chunk = " ".join(words[start:end])
-        chunks.append(chunk)
-        start = end - overlap_size
-    
-    return chunks
 
+def get_text_spliter(chunk_size: int = 1000, overlap: int = 200):
+    """
+    creates a splitter that respects semnatic boundaries.
+    default: 1000 chars (250 tokens) with 200 char overlap.
+    """
+
+    return RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=overlap,
+        legth_function=len,
+        separators=["\n\n", "\n", " ", ""],
+        is_separator_regex=False,
+    )
 
 async def _process_document_async(doc_id: str, tenant_id: str, gcs_path: str):
     """Async function that does the actual document processing"""
@@ -147,13 +147,14 @@ async def _process_document_async(doc_id: str, tenant_id: str, gcs_path: str):
     
     all_chunks = []
     chunk_index = 0
+
+    text_splitter = get_text_spliter(chunk_size=settings.CHUNK_SIZE, overlap=settings.CHUNK_OVERLAP)
     
     for page_data in extracted:
-        text_chunks = chunk_text(
-            page_data["text"],
-            chunk_size=settings.CHUNK_SIZE,
-            overlap_pct=settings.CHUNK_OVERLAP_PCT,
-        )
+        raw_text = page_data["text"].strip()
+        if not raw_text:
+            continue
+        text_chunks = text_splitter.split_text(raw_text)
         
         for text_chunk in text_chunks:
             all_chunks.append({

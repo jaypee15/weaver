@@ -343,6 +343,57 @@ class ChunkRepository:
                 }
                 for row in rows
             ]
+    async def search_keyword(
+        self,
+        tenant_id: UUID,
+        query_text: str,
+        top_k: int = 8,
+    ) -> List[dict]:
+        """
+        Perform full-text search using the GIN index and ts_rank.
+        """
+        async with self.session_factory() as session:
+            from sqlalchemy import text
+
+            sql = text("""
+                SELECT
+                    id,
+                    doc_id,
+                    text,
+                    page_num,
+                    chunk_metadata,
+                    ts_rank_cd(search_vector, websearch_to_tsquery('english', :query)) as rank
+                FROM doc_chunks
+                WHERE tenant_id = :tenant_id
+                 AND search_vector @@ websearch_to_tsquery('english', : query)
+                 ORDER BY rank DESC
+                 LIMIT :top_k
+            """)
+
+            result = await session.execute(
+                sql,
+                {
+                    "tenant_id": str(tenant_id),
+                    "query": query_text,
+                    "top_k": top_k,
+                }
+            )
+            rows = result.fetchall()
+
+            return [
+                {
+                    "id": str(row[0]),
+                    "doc_id": str(row[1]),
+                    "text": row[2],
+                    "page_num": row[3],
+                    "metadata": row[4],
+                    "score": float(row[5]),
+                    "source_type": "keyword"
+                }
+                for row in rows
+            ]
+
+
 
 
 class BotRepository:

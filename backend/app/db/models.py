@@ -1,9 +1,10 @@
-from sqlalchemy import Column, String, Integer, BigInteger, Boolean, Text, TIMESTAMP, ForeignKey, UniqueConstraint, Index
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Column, String, Integer, BigInteger, Boolean, Text, TIMESTAMP, ForeignKey, UniqueConstraint, Index, text
+from sqlalchemy.dialects.postgresql import UUID, JSONB, TSVECTOR
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
 import uuid
+import sqlalchemy as sa
 
 from app.db.connection import Base
 
@@ -92,6 +93,11 @@ class DocumentChunk(Base):
     tenant_id = Column(UUID(as_uuid=True), ForeignKey('tenants.id', ondelete='CASCADE'), nullable=False)
     embedding = Column(Vector(1536))
     text = Column(Text, nullable=False)
+
+    search_vector = Column(
+        TSVECTOR, 
+        sa.Computed("to_tsvector('english', text)", persisted=True)
+    )
     page_num = Column(Integer)
     chunk_index = Column(Integer, nullable=False)
     chunk_metadata = Column(JSONB, default={})
@@ -104,8 +110,10 @@ class DocumentChunk(Base):
         Index('idx_doc_chunks_doc_id', 'doc_id'),
         Index('idx_doc_chunks_tenant_id', 'tenant_id'),
         Index('idx_doc_chunks_embedding', 'embedding', postgresql_using='hnsw',
-              postgresql_with={'m': 16, 'ef_construction': 64},
+              postgresql_with={'m': 32, 'ef_construction': 128},
               postgresql_ops={'embedding': 'vector_cosine_ops'}),
+        Index('idx_doc_chunks_search_vector', 'search_vector', postgresql_using='gin'),
+        Index('idx_doc_chunks_metadata', 'chunk_metadata', postgresql_using='gin')
     )
 
 

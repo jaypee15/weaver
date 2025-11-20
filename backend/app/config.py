@@ -27,8 +27,8 @@ class Settings(BaseSettings):
     MAX_TENANT_STORAGE_GB: int = 2
     MAX_QUERIES_PER_DAY: int = 50  # Daily query limit per bot
     
-    CHUNK_SIZE: int = 500  # Reduced from 800 for faster LLM processing
-    CHUNK_OVERLAP_PCT: int = 10  # Reduced from 20
+    CHUNK_SIZE: int = 1000
+    CHUNK_OVERLAP: int = 200
     TOP_K_RESULTS: int = 3  # Reduced from 8 for faster retrieval
     LLM_TEMPERATURE: float = 0.2
     

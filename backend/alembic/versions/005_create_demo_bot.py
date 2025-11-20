@@ -1,7 +1,7 @@
 """Create demo bot tenant and admin user
 
-Revision ID: 004
-Revises: 003
+Revision ID: 005
+Revises: 004
 Create Date: 2025-11-12 03:30:00
 
 """
@@ -11,8 +11,8 @@ import os
 
 
 # revision identifiers, used by Alembic.
-revision = '004'
-down_revision = '003'
+revision = '005'
+down_revision = '004'
 branch_labels = None
 depends_on = None
 
@@ -29,11 +29,7 @@ def upgrade() -> None:
         )
         ON CONFLICT (id) DO NOTHING
     """)
-    
-    # Create demo bot with custom system prompt
-    # config_json stores per-bot customizations (system_prompt)
-    # Global settings (temperature, top_k) remain in environment variables
-    # Note: tenant trigger creates a bot automatically, so we update it instead
+    # create demo bot
     op.execute("""
         INSERT INTO bots (id, tenant_id, name, config_json, created_at, updated_at)
         VALUES (
@@ -95,4 +91,3 @@ def downgrade() -> None:
     # Remove demo bot and tenant
     op.execute("DELETE FROM bots WHERE tenant_id = '00000000-0000-0000-0000-000000000000'")
     op.execute("DELETE FROM tenants WHERE id = '00000000-0000-0000-0000-000000000000'")
-
