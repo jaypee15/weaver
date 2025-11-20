@@ -8,6 +8,7 @@ type DocumentQueryOptions = {
   offset?: number
   status?: string | null
   enabled?: boolean
+  polling?: boolean
 }
 
 const buildEmptyResponse = (options: DocumentQueryOptions): DocumentListResponse => ({
@@ -23,6 +24,7 @@ export function useDocuments(tenantId: string | undefined, options: DocumentQuer
   const limit = options.limit ?? 50
   const offset = options.offset ?? 0
   const status = options.status ?? null
+  const enablePolling = options.polling ?? false
 
   return useQuery<DocumentListResponse>({
     queryKey: ['documents', tenantId, limit, offset, status],
@@ -43,7 +45,7 @@ export function useDocuments(tenantId: string | undefined, options: DocumentQuer
       return response.data
     },
     enabled: !!tenantId && !!session && (options.enabled ?? true),
-    refetchInterval: 5000, // Poll for status updates
+    refetchInterval: enablePolling ? 5000 : false,
     keepPreviousData: true,
   })
 }

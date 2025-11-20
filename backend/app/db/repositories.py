@@ -234,7 +234,7 @@ class DocumentRepository:
                 filename=filename,
                 gcs_path=gcs_path,
                 size_bytes=size_bytes,
-                status='pending',
+                status='processing',
             )
             session.add(doc)
             await session.commit()
@@ -380,7 +380,7 @@ class ChunkRepository:
         """
         Perform full-text search using the GIN index and ts_rank.
         """
-        async with self.session_factory() as session:
+        async with self._session_factory()  as session:
             from sqlalchemy import text
 
             sql = text("""
@@ -393,7 +393,7 @@ class ChunkRepository:
                     ts_rank_cd(search_vector, websearch_to_tsquery('english', :query)) as rank
                 FROM doc_chunks
                 WHERE tenant_id = :tenant_id
-                 AND search_vector @@ websearch_to_tsquery('english', : query)
+                 AND search_vector @@ websearch_to_tsquery('english', :query)
                  ORDER BY rank DESC
                  LIMIT :top_k
             """)

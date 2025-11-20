@@ -3,6 +3,7 @@ set -e
 
 echo "🚀 Starting Weaver Backend..."
 
+
 if [ "$RUN_MIGRATIONS" = "true" ]; then
     echo "📊 Running database migrations with Alembic..."
     alembic upgrade head
@@ -18,5 +19,10 @@ if [ "$RUN_MIGRATIONS" = "true" ]; then
 fi
 
 echo "🌐 Starting FastAPI server..."
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+if [ "$ENVIRONMENT" = "development" ]; then
+    echo "   - Hot-reload enabled"
+    exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+else
+    exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+fi
 

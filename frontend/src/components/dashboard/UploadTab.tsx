@@ -30,6 +30,7 @@ export default function UploadTab({ tenantId }: UploadTabProps) {
     limit,
     offset: page * limit,
     status: statusFilter === 'all' ? null : statusFilter,
+    polling: true,
   })
   const uploadMutation = useUploadDocument(tenantId)
 

@@ -30,6 +30,7 @@ services:
     volumes:
       - ./backend/app:/app/app
       - gcs_credentials:/app/credentials
+      - ./logs:/app/logs
     networks:
       - weaver-network
     restart: unless-stopped
@@ -52,6 +53,8 @@ services:
       - SUPABASE_KEY=${SUPABASE_KEY}
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - WORKER_SOFT_TIME_LIMIT=600
+      - WORKER_TIME_LIMIT=720
     depends_on:
       api:
         condition: service_started
@@ -59,6 +62,7 @@ services:
       - ./backend/app:/app/app
       - ./worker:/app/worker
       - gcs_credentials:/app/credentials
+      - ./logs:/app/logs
     networks:
       - weaver-network
     restart: unless-stopped

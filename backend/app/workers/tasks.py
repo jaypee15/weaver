@@ -114,10 +114,16 @@ def get_text_spliter(chunk_size: int = 1000, overlap: int = 200):
     return RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=overlap,
-        legth_function=len,
+        length_function=len,
         separators=["\n\n", "\n", " ", ""],
         is_separator_regex=False,
     )
+
+def batch_list(iterable, n=20):
+    """Yield successive n-sized chunks from iterable."""
+    length = len(iterable)
+    for i in range(0, length, n):
+        yield iterable[i : min(i + n, length)]
 
 async def _process_document_async(doc_id: str, tenant_id: str, gcs_path: str):
     """Async function that does the actual document processing"""
@@ -164,22 +170,37 @@ async def _process_document_async(doc_id: str, tenant_id: str, gcs_path: str):
             })
             chunk_index += 1
     
-    texts = [c["text"] for c in all_chunks]
-    embeddings = await embedding_service.embed_documents(texts)
+    all_texts = [c["text"] for c in all_chunks]
+    total_chunks = len(all_texts)
+    print(f"Processing {total_chunks} chunks for doc {doc_id}")
+
+    # Process in batches to prevent timeouts and memory spikes
+    batch_size = 10
     
-    chunk_records = []
-    for chunk, embedding in zip(all_chunks, embeddings):
-        chunk_records.append({
-            "doc_id": doc_id,
-            "tenant_id": tenant_id,
-            "embedding": embedding,
-            "text": chunk["text"],
-            "page_num": chunk["page_num"],
-            "chunk_index": chunk["chunk_index"],
-            "metadata": {},
-        })
-    
-    await chunk_repo.insert_chunks(chunk_records)
+    for i, text_batch in enumerate(batch_list(all_texts, batch_size)):
+        # Generate embeddings for this batch
+        batch_embeddings = await embedding_service.embed_documents(text_batch)
+        
+        # Prepare records
+        chunk_records = []
+        start_index = i * batch_size
+        
+        for j, embedding in enumerate(batch_embeddings):
+            original_chunk = all_chunks[start_index + j]
+            chunk_records.append({
+                "doc_id": doc_id,
+                "tenant_id": tenant_id,
+                "embedding": embedding,
+                "text": original_chunk["text"],
+                "page_num": original_chunk["page_num"],
+                "chunk_index": original_chunk["chunk_index"],
+                "metadata": {},
+            })
+            
+        # Insert batch immediately (incremental progress)
+        await chunk_repo.insert_chunks(chunk_records)
+        print(f"Inserted batch {i+1}/{(total_chunks // batch_size) + 1} for doc {doc_id}")
+
     await doc_repo.update_status(UUID(doc_id), "completed")
 
 

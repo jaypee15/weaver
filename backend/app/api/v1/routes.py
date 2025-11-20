@@ -52,7 +52,7 @@ async def complete_signup(auth_data: dict = Depends(verify_supabase_token)):
     """
     profile_repo = ProfileRepository()
     
-    user_id = UUID(auth_data["id"])
+    user_id = auth_data["id"]
     email = auth_data["email"]
     
     try:

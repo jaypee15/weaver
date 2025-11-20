@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     # Demo Bot Configuration
     DEMO_BOT_TENANT_ID: str = "00000000-0000-0000-0000-000000000000"
     DEMO_BOT_ENABLED: bool = True
+
+    LOG_FILE: str = "/app/logs/weaver.log"
+
+    WORKER_SOFT_LIMIT: int = 600
+    WORKER_TIME_LIMIT: int = 720
     
     class Config:
         env_file = ".env"
